@@ -289,6 +289,13 @@ const handleAvatarChange = (file) => {
   useEffect(() => {
     if (!isOpen) return;
 
+    // Reset avatar preview/file when opening a profile so DB avatar is shown
+    setAvatarPreview(null);
+    setAvatarFile(null);
+    setAvatarError(null);
+    setRemoveAvatar(false);
+    setUploadProgress(0);
+
     const timeout = setTimeout(() => {
       const editingData = editingProfile || {};
       console.log(editingData);
@@ -443,6 +450,16 @@ if (editingData.sectionOrder && Array.isArray(editingData.sectionOrder)) {
   if (!value || value === "") return null;
   return value;
 };
+
+useEffect(() => {
+  if (!isOpen) {
+    setAvatarPreview(null);
+    setAvatarFile(null);
+    setAvatarError(null);
+    setRemoveAvatar(false);
+    setUploadProgress(0);
+  }
+}, [isOpen]);
 
   // // Update all your existing functions to work with customSections instead of customFields
   // const updateField = (key, value) => {
@@ -661,17 +678,24 @@ if (editingData.sectionOrder && Array.isArray(editingData.sectionOrder)) {
       
       {/* Avatar container */}
       <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-base-100 shadow-xl transition-transform duration-300 group-hover:scale-105">
-        <Image
+       {formData.personal?.avatar?.url ? <Image
+          src={
+            safeImageSrc(formData.personal?.avatar?.url)
+          }
+          width={128}
+          height={128}
+          alt="Avatar Preview"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+        /> : <Image
           src={
             safeImageSrc(avatarPreview) ||
-            safeImageSrc(formData.personal?.avatar?.url) ||
             "/default-avatar.png"
           }
           width={128}
           height={128}
           alt="Avatar Preview"
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-        />
+        />}
         
         {/* Overlay on hover */}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
