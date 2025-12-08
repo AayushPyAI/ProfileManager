@@ -341,7 +341,8 @@ export function EducationCard({ education }) {
 }
 
 export function ExperienceCard({ experience }) {
-  const [open, setOpen] = useState(false);
+  const [openDesc, setOpenDesc] = useState(false);
+  const [openTech, setOpenTech] = useState(false);
 
   const start = formatDate(experience.startDate);
   const end = experience.endDate ? formatDate(experience.endDate) : "Present";
@@ -350,10 +351,13 @@ export function ExperienceCard({ experience }) {
     typeof experience.technologies === "string"
       ? experience.technologies.split(",").map((x) => x.trim())
       : experience.technologies || [];
-  
+
   const desc = experience.description || "";
-   const TRUNC = 160;
-  const short = desc.slice(0, TRUNC) + (desc.length > TRUNC ? "..." : "");
+  const DESC_TRUNC = 160;
+  const TECH_TRUNC_COUNT = 6; // show more if > 6 tech items
+
+  const shortDesc = desc.slice(0, DESC_TRUNC) + (desc.length > DESC_TRUNC ? "..." : "");
+  const visibleTech = openTech ? tech : tech.slice(0, TECH_TRUNC_COUNT);
 
   return (
     <BaseCard
@@ -361,42 +365,60 @@ export function ExperienceCard({ experience }) {
       title={experience.position}
       subtitle={`${experience.company} • ${start} — ${end}`}
       accent="teal"
+      className="overflow-hidden"  // ensures consistent height
     >
-       <AnimatePresence initial={false}>
-          <motion.p
-            key={open ? "open" : "closed"}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25 }}
-          >
-            {open ? desc : short}
-          </motion.p>
-        </AnimatePresence>
-       {desc.length > TRUNC && (
-          <button
-            onClick={() => setOpen(!open)}
-            className="
-              mt-3 text-[#00ADB5] 
-              font-semibold text-sm hover:underline
-            "
-          >
-            {open ? "Show less" : "Read more"}
-          </button>
-        )}
+      {/* Description */}
+      <AnimatePresence initial={false}>
+        <motion.p
+          key={openDesc ? "open-desc" : "short-desc"}
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.25 }}
+          className="text-sm text-gray-200"
+        >
+          {openDesc ? desc : shortDesc}
+        </motion.p>
+      </AnimatePresence>
 
+      {/* Toggle Description Button */}
+      {desc.length > DESC_TRUNC && (
+        <button
+          onClick={() => setOpenDesc(!openDesc)}
+          className="mt-3 flex items-center gap-2 text-sm font-semibold text-[#00ADB5] hover:underline"
+        >
+          {openDesc ? "Show less" : "Read more"}
+          {openDesc ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+        </button>
+      )}
+
+      {/* Technologies */}
       {tech.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {tech.map((t, i) => (
-            <span
-              key={i}
-              className="
-                px-3 py-1 rounded-full text-xs 
-                bg-blur border text-white    hover:bg-[#00ADB5]"
+        <div className="mt-4">
+          <div className="flex flex-wrap gap-2">
+            {visibleTech.map((t, i) => (
+              <span
+                key={i}
+                className="
+                  px-3 py-1 rounded-full text-xs border
+                  bg-blur text-white hover:bg-[#00ADB5]
+                "
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+
+          {/* Toggle tech button */}
+          {tech.length > TECH_TRUNC_COUNT && (
+            <button
+              onClick={() => setOpenTech(!openTech)}
+              className="mt-3 flex items-center gap-2 text-sm font-semibold text-[#00ADB5] hover:underline"
             >
-              {t}
-            </span>
-          ))}
+              {openTech ? "Hide skills" : "View skills"}
+              {openTech ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </button>
+          )}
         </div>
       )}
     </BaseCard>

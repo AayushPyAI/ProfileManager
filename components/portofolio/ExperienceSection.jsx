@@ -82,7 +82,7 @@ export default function ExperienceSection({ experiences = [] }) {
           ref={scrollRef}
           className="
             flex gap-6 overflow-x-auto
-            snap-x snap-mandatory scrollbar-none pb-4 justify-center
+            snap-x snap-mandatory scrollbar-none pb-4 justify-start
           "
         >
           {experiences.map((exp, i) => {
