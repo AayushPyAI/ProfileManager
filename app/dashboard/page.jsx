@@ -15,6 +15,8 @@ import StatsCard from '@/components/dashboard/StatsCard';
 import ProfileList from '@/components/dashboard/ProfileList';
 import SearchBar from '@/components/dashboard/Searchbar';
 import ProfileFormModal from '@/components/dashboard/ProfileFormModal'; 
+import Navbar from '@/components/navbar';
+import Footer from '@/components/footer';
 
 const Dashboard = () => {
   const router = useRouter();
@@ -264,6 +266,7 @@ useEffect(() => {
 
 return (
   <ProtectedRoute>
+    <Navbar />
   <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50">
 
     {/* Header */}
@@ -366,6 +369,7 @@ return (
       isSaving={isSaving}
     />
   </div>
+  <Footer/>
   </ProtectedRoute>
 );
 

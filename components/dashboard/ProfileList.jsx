@@ -230,26 +230,18 @@ const handleDownloadPDF = async (profile) => {
   if (!profile?._id) return;
 
   try {
-    // Generate full HTML page for printing
     const htmlContent = generatePrintableHTML(profile);
-
-    // Convert to Blob
     const blob = new Blob([htmlContent], { type: "text/html" });
     const url = URL.createObjectURL(blob);
 
-    // Open in a new tab — this page itself handles PDF generation UI
-    window.open(url, "_blank");
+    // Save the window reference
+    const pdfWindow = window.open(url, "_blank");
 
-    // Cleanup when tab closed
+    // Cleanup when that tab is closed
     const timer = setInterval(() => {
-      try {
-        const win = window.open('', '_blank');
-        if (!win || win.closed) {
-          clearInterval(timer);
-          URL.revokeObjectURL(url);
-        }
-      } catch {
+      if (!pdfWindow || pdfWindow.closed) {
         clearInterval(timer);
+        URL.revokeObjectURL(url);
       }
     }, 2000);
 
@@ -257,6 +249,7 @@ const handleDownloadPDF = async (profile) => {
     console.error("Redirection error:", error);
   }
 };
+
 
 
 
