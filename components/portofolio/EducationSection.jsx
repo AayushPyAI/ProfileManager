@@ -7,23 +7,6 @@ import {
 import { EducationCard, HeaderTag } from "./Cards";
 
 export default function EducationSection({ education = [] }) {
-  const [scrollPosition, setScrollPosition] = useState(0);
-  const containerRef = useState(null);
-
-  const scrollLeft = () => {
-    if (containerRef.current) {
-      containerRef.current.scrollBy({ left: -100, behavior: 'smooth' });
-      setScrollPosition(containerRef.current.scrollLeft - 100);
-    }
-  };
-
-  const scrollRight = () => {
-    if (containerRef.current) {
-      containerRef.current.scrollBy({ left: 100, behavior: 'smooth' });
-      setScrollPosition(containerRef.current.scrollLeft + 100);
-    }
-  };
-
   return (
     <section className="relative w-full overflow-hidden">
       <div className="relative z-10 mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">

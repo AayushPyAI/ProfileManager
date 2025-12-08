@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Mail, Phone, MapPin, Globe, Github, Linkedin, PhoneCall, Twitter, Home, User, Send } from "lucide-react";
+import { Mail, Phone, MapPin, Globe, Github, Linkedin, PhoneCall, Twitter, Home, User, Send, Globe2 } from "lucide-react";
 import Image from "next/image";
 import Background from "@/public/Group 2372.png";
 import { HeaderTag } from "./Cards";
@@ -15,7 +15,7 @@ const scrollToSection = (id) => {
 };
 
 const ContactPage = ({ profile }) => {
-  const {github, linkedin, twitter } = profile.personal;
+  const {github, linkedin, twitter, website } = profile.personal;
 
   return (
     <div id="contact" className="min-h-screen w-full px-6 py-12 space-y-20">
@@ -84,9 +84,10 @@ const ContactPage = ({ profile }) => {
 
             {/* Social Icons */}
             <div className="flex items-center gap-6 mb-10 relative z-10">
-              {twitter && <SocialIcon icon={<Twitter size={16} />} />}
-              {github && <SocialIcon icon={<Github size={16} />} />}
-              {linkedin && <SocialIcon icon={<Linkedin size={16} />} />}
+              {twitter && <SocialIcon icon={<Twitter size={16} />} url={twitter} />}
+              {github && <SocialIcon icon={<Github size={16} />} url={github} />}
+              {linkedin && <SocialIcon icon={<Linkedin size={16}/>} url={linkedin} />}
+              {website && <SocialIcon icon = {<Globe size={16}/>} url={website}/>}
             </div>
           </div>
         </footer>
@@ -169,17 +170,26 @@ const FormId = process.env.NEXT_PUBLIC_FORM_ID;
 }
 
 
-function SocialIcon({ icon }) {
+function SocialIcon({ icon, url }) {
+  const handleClick = () => {
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   return (
-    <div className="
-      w-10 h-10 rounded-full 
-      bg-white/5 
-      text-gray-300 
-      flex items-center justify-center
-      hover:bg-white/10 hover:text-white 
-      transition
-    ">
+    <button
+      onClick={handleClick}
+      className="
+        w-10 h-10 rounded-full 
+        bg-white/5 
+        text-gray-300 
+        flex items-center justify-center
+        hover:bg-white/10 hover:text-white 
+        transition
+      "
+      aria-label="social-link"
+    >
       {icon}
-    </div>
+    </button>
   );
 }

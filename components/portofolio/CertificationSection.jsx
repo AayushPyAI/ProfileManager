@@ -1,13 +1,9 @@
 "use client";
 
 import { Award, Calendar, ExternalLink, Shield, ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 import { HeaderTag } from "./Cards";
 
 export default function CertificationsSection({ certifications }) {
-  const scrollRef = useRef(null);
-  const [showArrows, setShowArrows] = useState(false);
-
   const formatDate = (d) => {
     if (!d) return "N/A";
     return new Date(d).toLocaleDateString("en-US", {
@@ -16,83 +12,28 @@ export default function CertificationsSection({ certifications }) {
     });
   };
 
-  // Check if scrolling is needed
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    const isScrollable = el.scrollWidth > el.clientWidth;
-    setShowArrows(isScrollable);
-
-    const handleResize = () => {
-      setShowArrows(el.scrollWidth > el.clientWidth);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [certifications]);
-
-  const scrollLeft = () => {
-    scrollRef.current.scrollBy({ left: -320, behavior: "smooth" });
-  };
-
-  const scrollRight = () => {
-    scrollRef.current.scrollBy({ left: 320, behavior: "smooth" });
-  };
-
   return (
     <section className="w-full">
       <div className="px-6">
-
-        {/* HEADER */}
-        {/* <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-white shadow-sm border rounded-xl">
-            <Award className="w-5 h-5 text-indigo-600" />
-            <span className="text-sm font-semibold text-gray-700">
-              Verified Credentials
-            </span>
-          </div>
-
-          <h2 className="mt-6 text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight">
-            Certifications
-          </h2>
-        </div> */}
         <HeaderTag icon={<Award className="w-5 h-5"/>}
                title="Certifications"
               subtitle="Verified Credentials"/>
 
-        {/* NAVIGATION BUTTONS */}
-        {showArrows && (
-          <div className="flex justify-end gap-3 mb-4">
-            <button
-              onClick={scrollLeft}
-              className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition"
-            >
-              <ChevronLeft className="w-5 h-5 text-gray-700" />
-            </button>
-
-            <button
-              onClick={scrollRight}
-              className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition"
-            >
-              <ChevronRight className="w-5 h-5 text-gray-700" />
-            </button>
-          </div>
-        )}
-
-        {/* SCROLLABLE CARDS */}
-        <div
-          ref={scrollRef}
-          className="
-            flex gap-6 overflow-x-auto scrollbar-none
-            snap-x snap-mandatory pb-4 justify-center
-          "
-        >
+       <div className="mt-16 w-full flex justify-center px-4">
+        <div className="max-w-7xl w-full">
+        <div className="flex flex-wrap justify-center gap-8">
           {certifications.map((cert) => (
-            <div key={cert._id} className="snap-center w-[300px] flex-shrink-0">
+            <div key={cert._id}    className="
+                    w-full
+                    sm:w-[calc(50%-1rem)]
+                    lg:w-[calc(33.333%-1.334rem)]
+                    max-w-sm space-y-10
+                  ">
               <CertificationCard cert={cert} formatDate={formatDate} />
             </div>
           ))}
+        </div>
+        </div>
         </div>
 
       </div>
@@ -131,9 +72,8 @@ function CertificationCard({ cert, formatDate }) {
 
         <span
           className="
-            text-xs font-semibold px-3 py-1 rounded-full
-            bg-indigo-50 border border-indigo-200 text-[#00ADB5]
-            max-w-[120px]
+            text-xs font-semibold px-3 py-2 rounded-full
+            bg-indigo-50  text-[#00ADB5]
             truncate
           "
         >

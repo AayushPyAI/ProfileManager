@@ -50,13 +50,31 @@ const PortfolioModal = ({ isOpen, onClose, profile }) => {
     if (isOpen) createShortUrl();
   }, [isOpen, portfolioUrl]);
 
-  const handleCopyLink = async () => {
-    if (shortUrl) {
+const handleCopyLink = async () => {
+  if (!shortUrl) return;
+
+  try {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
       await navigator.clipboard.writeText(shortUrl);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    } else {
+      // Fallback: create temporary textarea
+      const textarea = document.createElement("textarea");
+      textarea.value = shortUrl;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopied(true);
     }
-  };
+
+    setTimeout(() => setCopied(false), 2000);
+
+  } catch (err) {
+    console.error("Clipboard error:", err);
+  }
+};
+
 
   const handleShare = (platform) => {
     const urlToShare = encodeURIComponent(shortUrl);
@@ -175,17 +193,17 @@ const PortfolioModal = ({ isOpen, onClose, profile }) => {
               <span className="label-text font-semibold text-gray-700">Share on Social Media</span>
             </label>
             <div className="flex flex-row gap-2 opacity-100">
-              <button className="text-white border-0" onClick={() => handleShare("twitter")}>
+              <button className="text-white border-0 cursor-pointer" onClick={() => handleShare("twitter")}>
                 <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" className='w-8 h-8' viewBox="0 0 50 50">
 <path d="M 6.9199219 6 L 21.136719 26.726562 L 6.2285156 44 L 9.40625 44 L 22.544922 28.777344 L 32.986328 44 L 43 44 L 28.123047 22.3125 L 42.203125 6 L 39.027344 6 L 26.716797 20.261719 L 16.933594 6 L 6.9199219 6 z"></path>
 </svg></button>
-              <button className=" text-white border-0" onClick={() => handleShare("linkedin")}><svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px"  className='w-8 h-8' viewBox="0 0 48 48">
+              <button className=" text-white border-0 cursor-pointer" onClick={() => handleShare("linkedin")}><svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px"  className='w-8 h-8' viewBox="0 0 48 48">
 <path fill="#0288D1" d="M42,37c0,2.762-2.238,5-5,5H11c-2.761,0-5-2.238-5-5V11c0-2.762,2.239-5,5-5h26c2.762,0,5,2.238,5,5V37z"></path><path fill="#FFF" d="M12 19H17V36H12zM14.485 17h-.028C12.965 17 12 15.888 12 14.499 12 13.08 12.995 12 14.514 12c1.521 0 2.458 1.08 2.486 2.499C17 15.887 16.035 17 14.485 17zM36 36h-5v-9.099c0-2.198-1.225-3.698-3.192-3.698-1.501 0-2.313 1.012-2.707 1.99C24.957 25.543 25 26.511 25 27v9h-5V19h5v2.616C25.721 20.5 26.85 19 29.738 19c3.578 0 6.261 2.25 6.261 7.274L36 36 36 36z"></path>
 </svg></button>
-              <button className=" text-white border-0" onClick={() => handleShare("facebook")}><svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px"  className='w-8 h-8' viewBox="0 0 48 48">
+              <button className=" text-white border-0 cursor-pointer" onClick={() => handleShare("facebook")}><svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px"  className='w-8 h-8' viewBox="0 0 48 48">
 <path fill="#039be5" d="M24 5A19 19 0 1 0 24 43A19 19 0 1 0 24 5Z"></path><path fill="#fff" d="M26.572,29.036h4.917l0.772-4.995h-5.69v-2.73c0-2.075,0.678-3.915,2.619-3.915h3.119v-4.359c-0.548-0.074-1.707-0.236-3.897-0.236c-4.573,0-7.254,2.415-7.254,7.917v3.323h-4.701v4.995h4.701v13.729C22.089,42.905,23.032,43,24,43c0.875,0,1.729-0.08,2.572-0.194V29.036z"></path>
 </svg></button>
-              <button className="text-white border-0" onClick={() => handleShare("whatsapp")}><svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px"  className='w-8 h-8' viewBox="0 0 48 48">
+              <button className="text-white border-0 cursor-pointer" onClick={() => handleShare("whatsapp")}><svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px"  className='w-8 h-8' viewBox="0 0 48 48">
 <path fill="#fff" d="M4.9,43.3l2.7-9.8C5.9,30.6,5,27.3,5,24C5,13.5,13.5,5,24,5c5.1,0,9.8,2,13.4,5.6	C41,14.2,43,18.9,43,24c0,10.5-8.5,19-19,19c0,0,0,0,0,0h0c-3.2,0-6.3-0.8-9.1-2.3L4.9,43.3z"></path><path fill="#fff" d="M4.9,43.8c-0.1,0-0.3-0.1-0.4-0.1c-0.1-0.1-0.2-0.3-0.1-0.5L7,33.5c-1.6-2.9-2.5-6.2-2.5-9.6	C4.5,13.2,13.3,4.5,24,4.5c5.2,0,10.1,2,13.8,5.7c3.7,3.7,5.7,8.6,5.7,13.8c0,10.7-8.7,19.5-19.5,19.5c-3.2,0-6.3-0.8-9.1-2.3	L5,43.8C5,43.8,4.9,43.8,4.9,43.8z"></path><path fill="#cfd8dc" d="M24,5c5.1,0,9.8,2,13.4,5.6C41,14.2,43,18.9,43,24c0,10.5-8.5,19-19,19h0c-3.2,0-6.3-0.8-9.1-2.3	L4.9,43.3l2.7-9.8C5.9,30.6,5,27.3,5,24C5,13.5,13.5,5,24,5 M24,43L24,43L24,43 M24,43L24,43L24,43 M24,4L24,4C13,4,4,13,4,24	c0,3.4,0.8,6.7,2.5,9.6L3.9,43c-0.1,0.3,0,0.7,0.3,1c0.2,0.2,0.4,0.3,0.7,0.3c0.1,0,0.2,0,0.3,0l9.7-2.5c2.8,1.5,6,2.2,9.2,2.2	c11,0,20-9,20-20c0-5.3-2.1-10.4-5.8-14.1C34.4,6.1,29.4,4,24,4L24,4z"></path><path fill="#40c351" d="M35.2,12.8c-3-3-6.9-4.6-11.2-4.6C15.3,8.2,8.2,15.3,8.2,24c0,3,0.8,5.9,2.4,8.4L11,33l-1.6,5.8	l6-1.6l0.6,0.3c2.4,1.4,5.2,2.2,8,2.2h0c8.7,0,15.8-7.1,15.8-15.8C39.8,19.8,38.2,15.8,35.2,12.8z"></path><path fill="#fff" fillRule="evenodd" d="M19.3,16c-0.4-0.8-0.7-0.8-1.1-0.8c-0.3,0-0.6,0-0.9,0	s-0.8,0.1-1.3,0.6c-0.4,0.5-1.7,1.6-1.7,4s1.7,4.6,1.9,4.9s3.3,5.3,8.1,7.2c4,1.6,4.8,1.3,5.7,1.2c0.9-0.1,2.8-1.1,3.2-2.3	c0.4-1.1,0.4-2.1,0.3-2.3c-0.1-0.2-0.4-0.3-0.9-0.6s-2.8-1.4-3.2-1.5c-0.4-0.2-0.8-0.2-1.1,0.2c-0.3,0.5-1.2,1.5-1.5,1.9	c-0.3,0.3-0.6,0.4-1,0.1c-0.5-0.2-2-0.7-3.8-2.4c-1.4-1.3-2.4-2.8-2.6-3.3c-0.3-0.5,0-0.7,0.2-1c0.2-0.2,0.5-0.6,0.7-0.8	c0.2-0.3,0.3-0.5,0.5-0.8c0.2-0.3,0.1-0.6,0-0.8C20.6,19.3,19.7,17,19.3,16z" clipRule="evenodd"></path>
 </svg></button>    
             </div>

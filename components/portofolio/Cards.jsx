@@ -219,18 +219,20 @@ export function SkillsCard({
   title,
   skills = [],
   Icon = Star,
-  maxVisible = 8,     // You can configure how many to show initially
+  maxVisible = 8,
 }) {
   const [expanded, setExpanded] = useState(false);
 
-  const skillArray = Array.isArray(skills)
-    ? skills
-    : skills.split(",").map(x => x.trim()).filter(Boolean);
+ const skillArray = Array.isArray(skills)
+  ? [...skills].sort((a, b) => a.length - b.length || a.localeCompare(b))
+  : skills
+      .split(",")
+      .map(x => x.trim())
+      .filter(Boolean)
+      .sort((a, b) => a.length - b.length || a.localeCompare(b));
 
-  const visibleSkills = expanded
-    ? skillArray
-    : skillArray.slice(0, maxVisible);
 
+  const visibleSkills = expanded ? skillArray : skillArray.slice(0, maxVisible);
   const hasMore = skillArray.length > maxVisible;
 
   return (
@@ -239,13 +241,10 @@ export function SkillsCard({
       title={title}
       subtitle={`${skillArray.length} skills`}
       accent="rose"
-      className="
-        min-h-[260px]   /* Control card height */
-        max-h-[320px]   /* Ensure consistent grid layout */
-        overflow-hidden
-      "
+      className="flex flex-col h-full"
     >
-      <div className="flex flex-wrap gap-2">
+      {/* Skills list */}
+      <div className="flex flex-wrap gap-2 mb-3">
         {visibleSkills.map((s, i) => (
           <span
             key={i}
@@ -253,7 +252,7 @@ export function SkillsCard({
               px-3 py-1 rounded-full 
               bg-blur border 
               hover:bg-[#00ADB5] 
-              text-white text-xs
+              text-white text-xs whitespace-nowrap
             "
           >
             {s}
@@ -261,21 +260,22 @@ export function SkillsCard({
         ))}
       </div>
 
+      {/* Expand / Collapse Button */}
       {hasMore && (
         <button
-          onClick={() => setExpanded(!expanded)}
+          onClick={() => setExpanded(prev => !prev)}
           className="
-            mt-3 text-xs font-semibold 
+            mt-auto text-xs font-semibold 
             text-[#00ADB5] hover:text-white
+            transition-colors
           "
         >
-          {expanded ? "Show less" : `Show more`}
+          {expanded ? "Show less" : "Show more"}
         </button>
       )}
     </BaseCard>
   );
 }
-
 
 
 export function EducationCard({ education }) {
@@ -347,10 +347,16 @@ export function ExperienceCard({ experience }) {
   const start = formatDate(experience.startDate);
   const end = experience.endDate ? formatDate(experience.endDate) : "Present";
 
-  const tech =
-    typeof experience.technologies === "string"
-      ? experience.technologies.split(",").map((x) => x.trim())
-      : experience.technologies || [];
+const tech =
+  typeof experience.technologies === "string"
+    ? experience.technologies
+        .split(",")
+        .map((x) => x.trim())
+        .sort((a, b) => a.length - b.length || a.localeCompare(b))
+    : (experience.technologies || [])
+        .slice()
+        .sort((a, b) => a.length - b.length || a.localeCompare(b));
+
 
   const desc = experience.description || "";
   const DESC_TRUNC = 160;
