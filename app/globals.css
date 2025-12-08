@@ -1,0 +1,129 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+
+:root {
+  --font-roboto: 'Roboto', sans-serif;
+}
+
+/* .font-roboto {
+  font-family: var(--font-roboto);
+} */
+
+
+body {
+  font-family: var(--font-roboto);
+  color: black;
+}
+
+
+@utility scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+
+@keyframes blob {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+@keyframes float {
+    0%, 100% { 
+      transform: translateY(0px) translateX(0px); 
+    }
+    25% { 
+      transform: translateY(-15px) translateX(5px); 
+    }
+    50% { 
+      transform: translateY(0px) translateX(10px); 
+    }
+    75% { 
+      transform: translateY(15px) translateX(5px); 
+    }
+  }
+  
+  @keyframes pulse-slow {
+    0%, 100% { 
+      transform: scale(1);
+      opacity: 0.1;
+    }
+    50% { 
+      transform: scale(1.15);
+      opacity: 0.2;
+    }
+  }
+  
+  @keyframes gradient-shift {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  @keyframes subtle-zoom {
+    0% {
+      transform: scale(1);
+    }
+    100% {
+      transform: scale(1.05);
+    }
+  }
+
+  @keyframes float-particle {
+    0%, 100% {
+      transform: translateY(0px) translateX(0px);
+      opacity: 0.3;
+    }
+    25% {
+      transform: translateY(-20px) translateX(10px);
+      opacity: 0.6;
+    }
+    50% {
+      transform: translateY(-10px) translateX(20px);
+      opacity: 0.4;
+    }
+    75% {
+      transform: translateY(-30px) translateX(10px);
+      opacity: 0.5;
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(200%);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
