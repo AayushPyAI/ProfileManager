@@ -1,6 +1,7 @@
-import { notFound } from 'next/navigation';
-import PortfolioClient from '@/components/portofolio/PortfolioClient';
-import { use } from 'react';
+import { notFound } from "next/navigation";
+import PortfolioClient from "@/components/portofolio/PortfolioClient";
+import { use } from "react";
+import { getProfile } from "@/lib/profile";
 
 function getParams(paramsPromise) {
   return use(paramsPromise);
@@ -8,27 +9,24 @@ function getParams(paramsPromise) {
 
 // DO NOT make this page async
 export default function PortfolioPage({ params }) {
-  const { profileId } = getParams(params); // unwrap params Promise here
+  const { profileId } = getParams(params);
 
   if (!profileId) notFound();
 
-  // fetch MUST be done inside a child async component
   return <ServerProfile profileId={profileId} />;
 }
 
-// Separate async server component only for data fetching
+// Async Server Component for DB fetching
 async function ServerProfile({ profileId }) {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/profile/get`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ profileId }),
-    cache: 'no-store',
-  });
+  try {
+    const profile = await getProfile(profileId);
+    if (!profile) notFound();
 
-  if (!res.ok) notFound();
+    const plainProfile = JSON.parse(JSON.stringify(profile));
 
-  const data = await res.json();
-  const profile = data?.profile ?? null;
-
-  return <PortfolioClient profileId={profileId} profile={profile} />;
+    return <PortfolioClient profileId={profileId} profile={plainProfile} />;
+  } catch (err) {
+    console.error("ServerProfile DB error:", err);
+    notFound();
+  }
 }
