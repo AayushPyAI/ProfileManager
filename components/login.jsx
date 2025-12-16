@@ -1,7 +1,7 @@
 // LoginForm with only color changes
 'use client';
 
-import { useState} from 'react';
+import { startTransition, useCallback, useState} from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/UserContext';
 import { Eye, EyeOff } from 'lucide-react';
@@ -12,14 +12,14 @@ const LoginForm = ({ onSwitchToRegister, onSuccess, onClose }) => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-   const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const PasswordIcon = showPassword ? EyeOff : Eye;
 
-
-  const handleChange = (e) => {
+  const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (error) setError('');
-  };
+  },[error]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,7 +44,9 @@ const LoginForm = ({ onSwitchToRegister, onSuccess, onClose }) => {
       });
       onSuccess?.();
       onClose?.();
-      router.push('/dashboard');
+     startTransition(() => {
+  router.push('/dashboard');
+        });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -90,7 +92,8 @@ const LoginForm = ({ onSwitchToRegister, onSuccess, onClose }) => {
             onClick={() => setShowPassword(s => !s)}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-800 z-20 w-8 h-8 flex items-center justify-center"
           >
-            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            {/* {showPassword ? <EyeOff size={18} /> : <Eye size={18} />} */}
+            <PasswordIcon size={18} />
           </button>
         </div>
 

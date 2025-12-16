@@ -1,3 +1,5 @@
+export const revalidate = 300;
+
 import { notFound } from "next/navigation";
 import PortfolioClient from "@/components/portofolio/PortfolioClient";
 import { use } from "react";
@@ -7,7 +9,6 @@ function getParams(paramsPromise) {
   return use(paramsPromise);
 }
 
-// DO NOT make this page async
 export default function PortfolioPage({ params }) {
   const { profileId } = getParams(params);
 
@@ -16,17 +17,24 @@ export default function PortfolioPage({ params }) {
   return <ServerProfile profileId={profileId} />;
 }
 
-// Async Server Component for DB fetching
 async function ServerProfile({ profileId }) {
+  let profile;
+
   try {
-    const profile = await getProfile(profileId);
-    if (!profile) notFound();
-
-    const plainProfile = JSON.parse(JSON.stringify(profile));
-
-    return <PortfolioClient profileId={profileId} profile={plainProfile} />;
+    profile = await getProfile(profileId);
   } catch (err) {
     console.error("ServerProfile DB error:", err);
-    notFound();
   }
+
+  if (!profile) notFound();
+
+  const plainProfile = JSON.parse(JSON.stringify(profile));
+
+  // ✅ JSX OUTSIDE try/catch
+  return (
+    <PortfolioClient
+      profileId={profileId}
+      profile={plainProfile}
+    />
+  );
 }

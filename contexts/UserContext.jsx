@@ -6,47 +6,81 @@ import { useRouter } from 'next/navigation';
 const UserContext = createContext(undefined);
 
 export const UserProvider = ({ children }) => {
+  const refreshPromiseRef = React.useRef(null);
+  const isLoggingOutRef = React.useRef(false);
   const [user, setUser] = useState(null);
   const [accessToken, setAccessToken] = useState(null);
   const [refreshToken, setRefreshToken] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  
+  
+useEffect(() => {
+  try {
+    const storedUser = localStorage.getItem('user');
+    const storedAccessToken = localStorage.getItem('accessToken');
+    const storedRefreshToken = localStorage.getItem('refreshToken');
 
-  // Load tokens and user from localStorage on mount
-  useEffect(() => {
-    const loadAuth = () => {
-      try {
-        const storedAccessToken = localStorage.getItem('accessToken');
-        const storedRefreshToken = localStorage.getItem('refreshToken');
-        const storedUser = localStorage.getItem('user');
+    if (storedUser && storedAccessToken && storedRefreshToken) {
+      setUser(JSON.parse(storedUser));
+      setAccessToken(storedAccessToken);
+      setRefreshToken(storedRefreshToken);
+    } else {
+      localStorage.clear();
+    }
+  } catch {
+    localStorage.clear();
+  }
+}, []);
 
-        if (storedAccessToken && storedRefreshToken && storedUser) {
-          setAccessToken(storedAccessToken);
-          setRefreshToken(storedRefreshToken);
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-        } else {
-          // Clear invalid data
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-        }
-      } catch (error) {
-        console.error('Error loading auth:', error);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-      } finally {
-        setIsLoading(false);
-      }
-    };
 
-    loadAuth();
-  }, []);
+  // const refreshAccessToken = useCallback(async () => {
+  //   try {
+  //     const storedRefreshToken = localStorage.getItem('refreshToken');
+  //     if (!storedRefreshToken) {
+  //       throw new Error('No refresh token');
+  //     }
 
-  // Refresh access token using refresh token
+  //     const response = await fetch('/api/user/refresh', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ refreshToken: storedRefreshToken }),
+  //     });
+
+  //     if (!response.ok) {
+  //       throw new Error('Failed to refresh token');
+  //     }
+
+  //     const data = await response.json();
+      
+  //     // Update tokens and user
+  //     localStorage.setItem('accessToken', data.accessToken);
+  //     localStorage.setItem('refreshToken', data.refreshToken);
+  //     localStorage.setItem('user', JSON.stringify(data.user));
+      
+  //     setAccessToken(data.accessToken);
+  //     setRefreshToken(data.refreshToken);
+  //     setUser(data.user);
+
+  //     return data.accessToken;
+  //   } catch (error) {
+  //     console.error('Error refreshing token:', error);
+  //     // Clear auth on refresh failure
+  //     logout();
+  //     throw error;
+  //   }
+  // }, []);
+  
   const refreshAccessToken = useCallback(async () => {
-    try {
+    
+    if (isLoggingOutRef.current) {
+  throw new Error('Logging out');
+}
+
+    if (refreshPromiseRef.current) {
+      return refreshPromiseRef.current;
+    }
+
+    refreshPromiseRef.current = (async () => {
       const storedRefreshToken = localStorage.getItem('refreshToken');
       if (!storedRefreshToken) {
         throw new Error('No refresh token');
@@ -63,8 +97,7 @@ export const UserProvider = ({ children }) => {
       }
 
       const data = await response.json();
-      
-      // Update tokens and user
+
       localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('refreshToken', data.refreshToken);
       localStorage.setItem('user', JSON.stringify(data.user));
@@ -74,48 +107,76 @@ export const UserProvider = ({ children }) => {
       setUser(data.user);
 
       return data.accessToken;
-    } catch (error) {
-      console.error('Error refreshing token:', error);
-      // Clear auth on refresh failure
-      logout();
-      throw error;
+    })();
+
+    try {
+      return await refreshPromiseRef.current;
+    } finally {
+      refreshPromiseRef.current = null;
     }
   }, []);
 
+
   // Make authenticated fetch request with automatic token refresh
-  const authenticatedFetch = useCallback(async (url, options = {}) => {
-    let token = accessToken || localStorage.getItem('accessToken');
+  // const authenticatedFetch = useCallback(async (url, options = {}) => {
+  //   let token = accessToken || localStorage.getItem('accessToken');
     
-    // If no token, try to refresh
-    if (!token) {
-      try {
-        token = await refreshAccessToken();
-      } catch (error) {
-        throw new Error('Authentication required');
-      }
+  //   // If no token, try to refresh
+  //   if (!token) {
+  //     try {
+  //       token = await refreshAccessToken();
+  //     } catch (error) {
+  //       throw new Error('Authentication required');
+  //     }
+  //   }
+
+  //   // Add Authorization header
+  //   const headers = {
+  //     ...options.headers,
+  //     'Authorization': `Bearer ${token}`,
+  //   };
+
+  //   let response = await fetch(url, { ...options, headers });
+
+  //   // If token expired, try to refresh and retry
+  //   if (response.status === 401) {
+  //     try {
+  //       const newToken = await refreshAccessToken();
+  //       headers['Authorization'] = `Bearer ${newToken}`;
+  //       response = await fetch(url, { ...options, headers });
+  //     } catch (error) {
+  //       throw new Error('Authentication failed');
+  //     }
+  //   }
+
+  //   return response;
+  // }, [accessToken, refreshAccessToken]);
+  
+  const authenticatedFetch = useCallback(async (url, options = {}) => {
+  let token = accessToken;
+  if (!token) {
+    try {
+      token = await refreshAccessToken();
+    } catch {
+      throw new Error('Authentication required');
     }
+  }
 
-    // Add Authorization header
-    const headers = {
-      ...options.headers,
-      'Authorization': `Bearer ${token}`,
-    };
+  const headers = {
+    ...options.headers,
+    Authorization: `Bearer ${token}`,
+  };
 
-    let response = await fetch(url, { ...options, headers });
+  let response = await fetch(url, { ...options, headers });
 
-    // If token expired, try to refresh and retry
-    if (response.status === 401) {
-      try {
-        const newToken = await refreshAccessToken();
-        headers['Authorization'] = `Bearer ${newToken}`;
-        response = await fetch(url, { ...options, headers });
-      } catch (error) {
-        throw new Error('Authentication failed');
-      }
-    }
+  if (response.status === 401) {
+    const newToken = await refreshAccessToken();
+    headers.Authorization = `Bearer ${newToken}`;
+    response = await fetch(url, { ...options, headers });
+  }
 
-    return response;
-  }, [accessToken, refreshAccessToken]);
+  return response;
+}, [accessToken, refreshAccessToken]);
 
   const login = (userData, tokens) => {
     if (userData && tokens) {
@@ -129,45 +190,45 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  const logout = async () => {
-    try {
-      // Call logout API if we have a token
-      const token = accessToken || localStorage.getItem('accessToken');
-      if (token) {
-        await fetch('/api/user/logout', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }).catch(() => {
-          // Ignore errors on logout
-        });
-      }
-    } catch (error) {
-      // Ignore errors
-    } finally {
-      setUser(null);
-      setAccessToken(null);
-      setRefreshToken(null);
-      localStorage.removeItem('user');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      router.push('/');
-    }
-  };
+const logout = () => {
+  const token = accessToken || localStorage.getItem('accessToken');
+
+  // Fire-and-forget
+  if (token) {
+    fetch('/api/user/logout', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    }).catch(() => {});
+  }
+
+  // Immediate local cleanup
+  setUser(null);
+  setAccessToken(null);
+  setRefreshToken(null);
+  localStorage.removeItem('user');
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  isLoggingOutRef.current = true;
+  router.replace('/');
+};
+
+const value = React.useMemo(() => ({
+  user,
+  setUser,
+  login,
+  logout,
+  accessToken,
+  authenticatedFetch
+}), [user, accessToken, authenticatedFetch]);
+
+
 
   return (
-    <UserContext.Provider value={{ 
-      user, 
-      setUser, 
-      login, 
-      logout, 
-      accessToken,
-      authenticatedFetch,
-      isLoading,
-    }}>
-      {children}
+<UserContext.Provider value={value}>
+     {children}
     </UserContext.Provider>
   );
 };

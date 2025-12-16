@@ -112,6 +112,9 @@ const [avatarFile, setAvatarFile] = useState(null);
 const [avatarError, setAvatarError] = useState(null);
 const [uploadProgress, setUploadProgress] = useState(0);
 const [removeAvatar, setRemoveAvatar] = useState(false);
+const [draggedItem, setDraggedItem] = useState({ section: null, index: null });
+const [dragOverItem, setDragOverItem] = useState({ section: null, index: null });
+const [dragOverIndex, setDragOverIndex] = useState(null);
 
 
   const hasChangesRef = useRef(false);
@@ -278,13 +281,78 @@ const handleAvatarChange = (file) => {
     return '';
   };
 
-  // Convert technologies from string to array (for backward compatibility if needed)
-  const convertTechnologiesToArray = (tech) => {
-    if (!tech) return [];
-    if (Array.isArray(tech)) return tech;
-    if (typeof tech === 'string') return tech.split(',').map(t => t.trim()).filter(t => t);
-    return [];
+
+const ReorderableList = ({ 
+  items, 
+  sectionKey, 
+  renderItem,
+  onReorder,
+  disabled = false 
+}) => {
+  const handleDragStart = (e, index) => {
+    if (disabled) return;
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedItem({ section: sectionKey, index });
+    
+    // Visual feedback
+    e.currentTarget.classList.add('opacity-50', 'ring-2', 'ring-primary');
   };
+
+  const handleDragOver = (e, index) => {
+    if (disabled) return;
+    e.preventDefault();
+    setDragOverItem({ section: sectionKey, index });
+    e.currentTarget.classList.add('bg-base-300/30');
+  };
+
+  const handleDragLeave = (e) => {
+    e.currentTarget.classList.remove('bg-base-300/30');
+  };
+
+  const handleDrop = (e, targetIndex) => {
+    if (disabled || !draggedItem.section || draggedItem.section !== sectionKey) return;
+    
+    e.preventDefault();
+    e.currentTarget.classList.remove('bg-base-300/30');
+    
+    if (draggedItem.index === targetIndex) {
+      setDraggedItem({ section: null, index: null });
+      setDragOverItem({ section: null, index: null });
+      return;
+    }
+
+    // Call reorder handler
+    onReorder(draggedItem.index, targetIndex);
+    
+    setDraggedItem({ section: null, index: null });
+    setDragOverItem({ section: null, index: null });
+  };
+
+  const handleDragEnd = (e) => {
+    e.currentTarget.classList.remove('opacity-50', 'ring-2', 'ring-primary');
+    setDraggedItem({ section: null, index: null });
+    setDragOverItem({ section: null, index: null });
+  };
+
+  return (
+    <div className="space-y-4">
+      {items.map((item, index) => (
+        <div
+          key={index}
+          draggable={!disabled}
+          onDragStart={(e) => handleDragStart(e, index)}
+          onDragOver={(e) => handleDragOver(e, index)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, index)}
+          onDragEnd={handleDragEnd}
+          className={`transition-all duration-200 cursor-move ${disabled ? 'cursor-not-allowed' : ''}`}
+        >
+          {renderItem(item, index)}
+        </div>
+      ))}
+    </div>
+  );
+};
 
   useEffect(() => {
     if (!isOpen) return;
@@ -551,6 +619,23 @@ useEffect(() => {
     }));
   };
 
+   const handleItemReorder = (section, fromIndex, toIndex) => {
+  if (fromIndex === toIndex) return;
+  
+  setFormData(prev => {
+    const items = [...prev[section]];
+    const [movedItem] = items.splice(fromIndex, 1);
+    items.splice(toIndex, 0, movedItem);
+    
+    // Update order numbers
+    const updatedItems = items.map((item, idx) => ({
+      ...item,
+      order: idx
+    }));
+    
+    return { ...prev, [section]: updatedItems };
+  });
+};
   // Section drag and drop handlers
   const handleSectionDragStart = (e, section) => {
     setDraggedSection(section);
@@ -929,160 +1014,217 @@ useEffect(() => {
                 );
               }
 
-              if (sectionKey === 'education') {
-                return (
-                  <section
-                    key="education"
-                    className="card bg-base-200 p-6"
-                    draggable
-                    onDragStart={(e) => handleSectionDragStart(e, 'education')}
-                    onDragOver={handleSectionDragOver}
-                    onDrop={(e) => handleSectionDrop(e, 'education')}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleSection('education')}
-                      className="flex items-center justify-between w-full text-left"
-                    >
-                      <div className="flex items-center gap-2">
-                        <GripVertical className="w-4 h-4 text-base-content/50 cursor-grab active:cursor-grabbing" />
-                        <h3 className="text-lg font-semibold text-base-content">Education</h3>
-                      </div>
-                      {expandedSections.education ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                    </button>
+             if (sectionKey === 'education') {
+  return (
+    <section
+      key="education"
+      className="card bg-base-200 p-6"
+      draggable
+      onDragStart={(e) => handleSectionDragStart(e, 'education')}
+      onDragOver={handleSectionDragOver}
+      onDrop={(e) => handleSectionDrop(e, 'education')}
+    >
+      <button
+        type="button"
+        onClick={() => toggleSection('education')}
+        className="flex items-center justify-between w-full text-left"
+      >
+        <div className="flex items-center gap-2">
+          <GripVertical className="w-4 h-4 text-base-content/50 cursor-grab active:cursor-grabbing" />
+          <h3 className="text-lg font-semibold text-base-content">Education</h3>
+        </div>
+        {expandedSections.education ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+      </button>
 
-                    {expandedSections.education && (
-                      <div className="mt-4 space-y-4">
-                        {formData.education?.map((edu, idx) => (
-                          <div key={idx} className="card bg-base-100 p-4 border border-base-300">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              <div className="space-y-2">
-                                <label className="label">
-                                  <span className="label-text font-medium">Institution</span>
-                                </label>
-                                <input
-                                  placeholder="University Name"
-                                  value={edu.institution}
-                                  onChange={(e) => updateNestedItem('education', idx, 'institution', e.target.value)}
-                                  className="input input-bordered w-full"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="label">
-                                  <span className="label-text font-medium">Degree</span>
-                                </label>
-                                <input
-                                  placeholder="Bachelor of Science"
-                                  value={edu.degree}
-                                  onChange={(e) => updateNestedItem('education', idx, 'degree', e.target.value)}
-                                  className="input input-bordered w-full"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="label">
-                                  <span className="label-text font-medium">Field of Study</span>
-                                </label>
-                                <input
-                                  placeholder="Computer Science"
-                                  value={edu.fieldOfStudy}
-                                  onChange={(e) => updateNestedItem('education', idx, 'fieldOfStudy', e.target.value)}
-                                  className="input input-bordered w-full"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="label">
-                                  <span className="label-text font-medium">Grade</span>
-                                </label>
-                                <input
-                                  placeholder="GPA or Grade"
-                                  value={edu.grade || ''}
-                                  onChange={(e) => updateNestedItem('education', idx, 'grade', e.target.value)}
-                                  className="input input-bordered w-full"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="label">
-                                  <span className="label-text font-medium">Start Date</span>
-                                </label>
-                                <input
-                                  type="date"
-                                  value={edu.startDate}
-                                  onChange={(e) => updateNestedItem('education', idx, 'startDate', e.target.value)}
-                                  className="input input-bordered w-full"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="label">
-                                  <span className="label-text font-medium">End Date</span>
-                                </label>
-                                <input
-                                  type="date"
-                                   disabled={edu.isCurrent}
-                                  value={edu.endDate || ''}
-                                  onChange={(e) => updateNestedItem('education', idx, 'endDate', e.target.value)}
-                                  className="input input-bordered w-full"
-                                />
-                                 <div className="flex items-center gap-2 mb-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={edu.isCurrent}
-                                    onChange={(e) => {
-                                      updateNestedItem('education', idx, "isCurrent", e.target.checked);
-                                      if (e.target.checked) {
-                                        updateNestedItem('education', idx, "endDate", "");
-                                      }
-                                    }}
-                                  />
-                                  <span className="text-sm">Currently Working / Studying</span>
-                                </div>
-                              </div>
-                              <div className="space-y-2 md:col-span-2">
-                                <label className="label">
-                                  <span className="label-text font-medium">Description</span>
-                                </label>
-                                <textarea
-                                  placeholder="Description of your studies, achievements..."
-                                  value={edu.description || ''}
-                                  onChange={(e) => updateNestedItem('education', idx, 'description', e.target.value)}
-                                  className="textarea textarea-bordered w-full"
-                                  rows={3}
-                                />
-                              </div>
-                            </div>
-                            <div className="flex justify-end mt-3 pt-3 border-t border-base-300">
-                              <button
-                                type="button"
-                                onClick={() => removeItem('education', idx)}
-                                className="btn btn-ghost btn-sm text-error hover:bg-error/10"
-                              >
-                                <Trash2 className="w-4 h-4" /> Remove
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                        {(!formData.education || formData.education.length === 0) && (
-                          <div className="text-center text-base-content/60 py-8">
-                            No education entries added yet.
-                          </div>
-                        )}
-                        
-                        {/* Add Button at Bottom */}
-                        <button
-                          type="button"
-                          disabled={
-                            formData.education.length > 0 &&
-                            isObjectEmpty(formData.education[formData.education.length - 1])
-                          }
-                          className="btn btn-primary w-full mt-4"
-                          onClick={() => addItem('education', { ...initialEducation })}
-                        >
-                          <Plus className="w-4 h-4" /> Add Education
-                        </button>
-                      </div>
-                    )}
-                  </section>
-                );
-              }
+      {expandedSections.education && (
+        <div className="mt-4 space-y-4">
+          {formData.education?.map((edu, idx) => (
+            <div 
+              key={idx} 
+              className="card bg-base-100 p-4 border border-base-300 relative group"
+              draggable
+              onDragStart={(e) => {
+                setDraggedItem({ section: 'education', index: idx });
+                e.currentTarget.classList.add('opacity-50', 'cursor-grabbing');
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (draggedItem.section === 'education' && draggedItem.index !== idx) {
+                  setDragOverIndex(idx);
+                  e.currentTarget.classList.add('border-primary', 'bg-base-300/30');
+                }
+              }}
+              onDragLeave={(e) => {
+                e.currentTarget.classList.remove('border-primary', 'bg-base-300/30');
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('border-primary', 'bg-base-300/30');
+                
+                if (draggedItem.section === 'education' && draggedItem.index !== idx) {
+                  handleItemReorder('education', draggedItem.index, idx);
+                }
+                
+                setDraggedItem({ section: null, index: null });
+                setDragOverIndex(null);
+              }}
+              onDragEnd={(e) => {
+                e.currentTarget.classList.remove('opacity-50', 'cursor-grabbing');
+                setDraggedItem({ section: null, index: null });
+                setDragOverIndex(null);
+              }}
+            >
+              {/* Drag handle (similar to section) */}
+              <button
+                type="button"
+                className="absolute -left-3 top-4 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing z-10"
+                draggable="true"
+              >
+                <GripVertical className="w-5 h-5 text-base-content/40 hover:text-base-content/70" />
+              </button>
+              
+              {/* Collapse/Expand button for this item */}
+              <button
+                type="button"
+                className="absolute right-4 top-4 text-base-content/50 hover:text-base-content"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                <ChevronUp className="w-4 h-4" />
+              </button>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="label">
+                    <span className="label-text font-medium">Institution</span>
+                  </label>
+                  <input
+                    placeholder="University Name"
+                    value={edu.institution}
+                    onChange={(e) => updateNestedItem('education', idx, 'institution', e.target.value)}
+                    className="input input-bordered w-full"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="label">
+                    <span className="label-text font-medium">Degree</span>
+                  </label>
+                  <input
+                    placeholder="Bachelor of Science"
+                    value={edu.degree}
+                    onChange={(e) => updateNestedItem('education', idx, 'degree', e.target.value)}
+                    className="input input-bordered w-full"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="label">
+                    <span className="label-text font-medium">Field of Study</span>
+                  </label>
+                  <input
+                    placeholder="Computer Science"
+                    value={edu.fieldOfStudy}
+                    onChange={(e) => updateNestedItem('education', idx, 'fieldOfStudy', e.target.value)}
+                    className="input input-bordered w-full"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="label">
+                    <span className="label-text font-medium">Grade</span>
+                  </label>
+                  <input
+                    placeholder="GPA or Grade"
+                    value={edu.grade || ''}
+                    onChange={(e) => updateNestedItem('education', idx, 'grade', e.target.value)}
+                    className="input input-bordered w-full"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="label">
+                    <span className="label-text font-medium">Start Date</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={edu.startDate}
+                    onChange={(e) => updateNestedItem('education', idx, 'startDate', e.target.value)}
+                    className="input input-bordered w-full"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="label">
+                    <span className="label-text font-medium">End Date</span>
+                  </label>
+                  <input
+                    type="date"
+                    disabled={edu.isCurrent}
+                    value={edu.endDate || ''}
+                    onChange={(e) => updateNestedItem('education', idx, 'endDate', e.target.value)}
+                    className="input input-bordered w-full"
+                  />
+                  <div className="flex items-center gap-2 mb-2">
+                    <input
+                      type="checkbox"
+                      checked={edu.isCurrent}
+                      onChange={(e) => {
+                        updateNestedItem('education', idx, "isCurrent", e.target.checked);
+                        if (e.target.checked) {
+                          updateNestedItem('education', idx, "endDate", "");
+                        }
+                      }}
+                    />
+                    <span className="text-sm">Currently Studying</span>
+                  </div>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="label">
+                    <span className="label-text font-medium">Description</span>
+                  </label>
+                  <textarea
+                    placeholder="Description of your studies, achievements..."
+                    value={edu.description || ''}
+                    onChange={(e) => updateNestedItem('education', idx, 'description', e.target.value)}
+                    className="textarea textarea-bordered w-full"
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end mt-3 pt-3 border-t border-base-300">
+                <button
+                  type="button"
+                  onClick={() => removeItem('education', idx)}
+                  className="btn btn-ghost btn-sm text-error hover:bg-error/10"
+                >
+                  <Trash2 className="w-4 h-4" /> Remove
+                </button>
+              </div>
+            </div>
+          ))}
+          {(!formData.education || formData.education.length === 0) && (
+            <div className="text-center text-base-content/60 py-8">
+              No education entries added yet.
+            </div>
+          )}
+          
+          {/* Add Button at Bottom */}
+          <button
+            type="button"
+            disabled={
+              formData.education.length > 0 &&
+              isObjectEmpty(formData.education[formData.education.length - 1])
+            }
+            className="btn btn-primary w-full mt-4"
+            onClick={() => addItem('education', { 
+              ...initialEducation, 
+              order: formData.education?.length || 0 
+            })}
+          >
+            <Plus className="w-4 h-4" /> Add Education
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
 
               if (sectionKey === 'experience') {
                 return (

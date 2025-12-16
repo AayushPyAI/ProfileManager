@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-import { deleteProfile, getProfile } from '../../../../lib/profile.js';
+import { deleteProfile, getProfile } from '@/lib/profile';
 import { authenticateRequest } from '@/lib/apiAuth.js';
 
-// GET is public (for viewing portfolios)
 export async function GET(req, context) {
   const resolvedParams = 'then' in context.params ? await context.params : context.params;
   const { profileId } = resolvedParams;
@@ -14,7 +13,6 @@ export async function GET(req, context) {
   return NextResponse.json({ profile });
 }
 
-// DELETE requires authentication
 export async function DELETE(req, context) {
   try {
     // Authenticate the request

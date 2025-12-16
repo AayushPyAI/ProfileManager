@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getProfile } from '../../../../lib/profile.js';
+import { getProfile } from '@/lib/profile.js';
 
 export async function POST(req) {
   try {

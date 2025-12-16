@@ -221,16 +221,8 @@ const ProfileList = ({
   onDelete, 
   isLoading = false 
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const itemsPerPage = 10;
- const filteredProfiles = profiles;
-
-  // Pagination
-  const totalPages = Math.ceil(filteredProfiles.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentProfiles = filteredProfiles.slice(startIndex, startIndex + itemsPerPage);
 
   const handlePortfolioAction = (profile) => {
     setSelectedProfile(profile);
@@ -238,37 +230,41 @@ const ProfileList = ({
   };
   
   const handleOpenPortfolio = (profile) => {
-  if (!profile?._id) return;
-  const portfolioUrl = `${window.location.origin}/${profile._id}`;
-  window.open(portfolioUrl, "_blank");
-};
+    if (!profile?._id) return;
+    const portfolioUrl = `${window.location.origin}/${profile._id}`;
+    window.open(portfolioUrl, "_blank");
+  };
 
-const handleDownloadPDF = async (profile) => {
-  if (typeof window === "undefined") return;
-  if (!profile?._id) return;
+  const handleDownloadPDF = async (profile) => {
+    if (typeof window === "undefined") return;
+    if (!profile?._id) return;
 
-  try {
-    const htmlContent = generatePrintableHTML(profile);
-    const blob = new Blob([htmlContent], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
+    try {
+      const htmlContent = generatePrintableHTML(profile);
+      const blob = new Blob([htmlContent], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
 
-    // Save the window reference
-    const pdfWindow = window.open(url, "_blank");
+      const pdfWindow = window.open(url, "_blank");
 
-    // Cleanup when that tab is closed
-    const timer = setInterval(() => {
-      if (!pdfWindow || pdfWindow.closed) {
-        clearInterval(timer);
-        URL.revokeObjectURL(url);
-      }
-    }, 2000);
+      const timer = setInterval(() => {
+        if (!pdfWindow || pdfWindow.closed) {
+          clearInterval(timer);
+          URL.revokeObjectURL(url);
+        }
+      }, 2000);
 
-  } catch (error) {
-    console.error("Redirection error:", error);
-  }
-};
-
-
+    } catch (error) {
+      console.error("Redirection error:", error);
+    }
+  };
+  
+  const getInitials = (name = "") =>
+  name
+    .split(" ")
+    .map(n => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
 
   if (isLoading) {
@@ -282,7 +278,6 @@ const handleDownloadPDF = async (profile) => {
                   <th className="w-12 text-center rounded-tl-2xl">#</th>
                   <th>Name</th>
                   <th>Email</th>
-                  <th>Location</th>
                   <th>Experience</th>
                   <th>Education</th>
                   <th className="w-32 text-center rounded-tr-2xl">Actions</th>
@@ -294,7 +289,6 @@ const handleDownloadPDF = async (profile) => {
                     <td><div className="h-4 bg-linear-to-r from-blue-200 to-purple-200 rounded w-8 animate-pulse mx-auto"></div></td>
                     <td><div className="h-4 bg-linear-to-r from-blue-200 to-purple-200 rounded w-32 animate-pulse"></div></td>
                     <td><div className="h-4 bg-linear-to-r from-blue-200 to-purple-200 rounded w-40 animate-pulse"></div></td>
-                    <td><div className="h-4 bg-linear-to-r from-blue-200 to-purple-200 rounded w-24 animate-pulse"></div></td>
                     <td><div className="h-4 bg-linear-to-r from-blue-200 to-purple-200 rounded w-16 animate-pulse"></div></td>
                     <td><div className="h-4 bg-linear-to-r from-blue-200 to-purple-200 rounded w-16 animate-pulse"></div></td>
                     <td><div className="h-8 bg-linear-to-r from-blue-200 to-purple-200 rounded animate-pulse"></div></td>
@@ -319,7 +313,7 @@ const handleDownloadPDF = async (profile) => {
               <table className="table w-full border-collapse table-auto">
                 <thead>
                   <tr className="bg-[#4E56C0] text-white text-sm font-bold text-center">
-                    <th className="w-12 text-center py-4 rounded-tl-3xl justify-center">Id</th>
+                    <th className="w-12 text-center py-4 rounded-tl-3xl justify-center">#</th>
                     <th className="py-4 border-white border-x">Profile</th>
                     <th className="py-4 border-white border-x">Email</th>
                     <th className="text-center py-4 border-white border-x">Experience</th>
@@ -328,18 +322,28 @@ const handleDownloadPDF = async (profile) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {currentProfiles.map((profile, index) => (
+                  {profiles.map((profile, index) => (
                     <tr key={profile._id || profile.personal.email} className="hover:bg-blue-50/80 transition-all duration-200 border-b border-blue-100 last:border-b-0">
                       <td className="text-center font-bold text-[#4E56C0] py-4">
-                        {startIndex + index + 1}
+                        {index + 1}
                       </td>
                       <td className="py-4">
                         <div className="flex items-center gap-4">
                           <div className="avatar placeholder">
                            <div className="w-12 h-12 bg-linear-to-br from-amber-500 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
                               <span className="text-white font-bold text-sm">
-                                {profile?.personal?.avatar?.url ? <Image src={profile?.personal?.avatar?.url} alt={profile?.personal?.name || "user"} fill className='object-contain rounded-full'/> : 
-                                profile?.personal?.name ? profile?.personal?.name .split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) : 'P'
+                                {profile?.personal?.avatar?.url ?     <Image
+      src={profile.personal.avatar.url}
+      alt={profile.personal.name || "User"}
+      width={48}
+      height={48}
+      className="rounded-full object-cover"
+    /> : 
+                                (
+    <span className="text-white font-bold text-sm">
+      {getInitials(profile?.personal?.name) || "P"}
+    </span>
+  )
                                 }
                               </span>
                             </div>
@@ -372,7 +376,7 @@ const handleDownloadPDF = async (profile) => {
                             <button
                             onClick={() => handleOpenPortfolio(profile)}
                             className="btn bg-linear-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white border-0 btn-sm gap-1 shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-200"
-                            title="Portfolio Options"
+                            title="View Portfolio"
                             disabled={!profile._id}
                           >
                             <Eye className="w-4 h-4" />
@@ -388,7 +392,7 @@ const handleDownloadPDF = async (profile) => {
                           <button
                             onClick={() => handlePortfolioAction(profile)}
                             className="btn bg-linear-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white border-0 btn-sm gap-1 shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-200"
-                            title="Portfolio Options"
+                            title="Share Portfolio"
                             disabled={!profile._id}
                           >
                             <Share2 className="w-4 h-4" />
@@ -417,64 +421,6 @@ const handleDownloadPDF = async (profile) => {
             </div>
           </div>
         </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-blue-200">
-            <div className="text-sm font-semibold text-gray-700 bg-blue-50 px-4 py-2 rounded-2xl border border-blue-200">
-              Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredProfiles.length)} of {filteredProfiles.length} profiles
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="btn bg-linear-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white border-0 btn-sm gap-2 shadow-md hover:shadow-lg disabled:from-gray-400 disabled:to-gray-500 disabled:hover:from-gray-400 disabled:hover:to-gray-500 transform hover:-translate-y-1 transition-all duration-200"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Previous
-              </button>
-              
-              <div className="flex items-center gap-1 flex-wrap justify-center">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-                  
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`btn btn-sm min-w-10 font-bold ${
-                        currentPage === pageNum 
-                          ? 'bg-linear-to-r from-amber-500 to-orange-500 text-white border-0 shadow-lg' 
-                          : 'bg-linear-to-r from-blue-100 to-purple-100 text-gray-700 border border-blue-200 hover:from-blue-200 hover:to-purple-200 shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-200'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-              </div>
-              
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="btn bg-linear-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white border-0 btn-sm gap-2 shadow-md hover:shadow-lg disabled:from-gray-400 disabled:to-gray-500 disabled:hover:from-gray-400 disabled:hover:to-gray-500 transform hover:-translate-y-1 transition-all duration-200"
-              >
-                Next
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Portfolio Modal */}

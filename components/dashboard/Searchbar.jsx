@@ -1,24 +1,42 @@
-import { useState, useEffect } from 'react';
-import { Search } from 'lucide-react';
+import { useEffect, useMemo, useState } from "react";
+import { Search } from "lucide-react";
+import debounce from "lodash/debounce";
 
-const SearchBar = ({ 
-  onSearch, 
+const SearchBar = ({
+  onSearch,
   placeholder = "Search profiles...",
-  className = "" 
+  className = "",
+  delay = 300,
 }) => {
-  const [query, setQuery] = useState('');
-  
-  useEffect(() => {
-    const delayDebounce = setTimeout(() => {
-      onSearch(query);
-    }, 300);
+  const [query, setQuery] = useState("");
 
-    return () => clearTimeout(delayDebounce);
-  }, [query, onSearch]);
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((value) => {
+        onSearch(value);
+      }, delay),
+    [onSearch, delay]
+  );
+
+  useEffect(() => {
+    const trimmed = query.trim();
+
+    // Avoid initial empty search
+    if (!trimmed) {
+      debouncedSearch.cancel();
+      onSearch("");
+      return;
+    }
+
+    debouncedSearch(trimmed);
+
+    return () => debouncedSearch.cancel();
+  }, [query, debouncedSearch, onSearch]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSearch(query); // still supports pressing Enter
+    debouncedSearch.cancel();
+    onSearch(query.trim());
   };
 
   return (

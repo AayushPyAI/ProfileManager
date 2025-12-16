@@ -176,4 +176,5 @@ ProfileSchema.virtual('userInfo', {
 
 // ---- Export ----
 const Profile = models.Profile || model('Profile', ProfileSchema);
-module.exports = Profile;
+// module.exports = Profile;
+export default Profile;
