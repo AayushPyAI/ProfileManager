@@ -32,55 +32,16 @@ useEffect(() => {
   }
 }, []);
 
-
-  // const refreshAccessToken = useCallback(async () => {
-  //   try {
-  //     const storedRefreshToken = localStorage.getItem('refreshToken');
-  //     if (!storedRefreshToken) {
-  //       throw new Error('No refresh token');
-  //     }
-
-  //     const response = await fetch('/api/user/refresh', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({ refreshToken: storedRefreshToken }),
-  //     });
-
-  //     if (!response.ok) {
-  //       throw new Error('Failed to refresh token');
-  //     }
-
-  //     const data = await response.json();
-      
-  //     // Update tokens and user
-  //     localStorage.setItem('accessToken', data.accessToken);
-  //     localStorage.setItem('refreshToken', data.refreshToken);
-  //     localStorage.setItem('user', JSON.stringify(data.user));
-      
-  //     setAccessToken(data.accessToken);
-  //     setRefreshToken(data.refreshToken);
-  //     setUser(data.user);
-
-  //     return data.accessToken;
-  //   } catch (error) {
-  //     console.error('Error refreshing token:', error);
-  //     // Clear auth on refresh failure
-  //     logout();
-  //     throw error;
-  //   }
-  // }, []);
-  
-  const refreshAccessToken = useCallback(async () => {
-    
-    if (isLoggingOutRef.current) {
-  throw new Error('Logging out');
-}
-
-    if (refreshPromiseRef.current) {
-      return refreshPromiseRef.current;
+  function isAccessTokenExpired(token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return Date.now() >= payload.exp * 1000;
+    } catch {
+      return true;
     }
-
-    refreshPromiseRef.current = (async () => {
+  }
+  const refreshAccessToken = useCallback(async () => {
+    try {
       const storedRefreshToken = localStorage.getItem('refreshToken');
       if (!storedRefreshToken) {
         throw new Error('No refresh token');
@@ -101,65 +62,73 @@ useEffect(() => {
       localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('refreshToken', data.refreshToken);
       localStorage.setItem('user', JSON.stringify(data.user));
-      
       setAccessToken(data.accessToken);
       setRefreshToken(data.refreshToken);
       setUser(data.user);
 
       return data.accessToken;
-    })();
-
-    try {
-      return await refreshPromiseRef.current;
-    } finally {
-      refreshPromiseRef.current = null;
+    } catch (error) {
+      console.error('Error refreshing token:', error);
+      // Clear auth on refresh failure
+      logout();
+      throw error;
     }
   }, []);
 
+  //   const refreshAccessToken = useCallback(async () => {
 
-  // Make authenticated fetch request with automatic token refresh
-  // const authenticatedFetch = useCallback(async (url, options = {}) => {
-  //   let token = accessToken || localStorage.getItem('accessToken');
-    
-  //   // If no token, try to refresh
-  //   if (!token) {
-  //     try {
-  //       token = await refreshAccessToken();
-  //     } catch (error) {
-  //       throw new Error('Authentication required');
+  //     if (isLoggingOutRef.current) {
+  //   throw new Error('Logging out');
+  // }
+
+  //     if (refreshPromiseRef.current) {
+  //       return refreshPromiseRef.current;
   //     }
-  //   }
 
-  //   // Add Authorization header
-  //   const headers = {
-  //     ...options.headers,
-  //     'Authorization': `Bearer ${token}`,
-  //   };
+  //     refreshPromiseRef.current = (async () => {
+  //       const storedRefreshToken = localStorage.getItem('refreshToken');
+  //       if (!storedRefreshToken) {
+  //         throw new Error('No refresh token');
+  //       }
 
-  //   let response = await fetch(url, { ...options, headers });
+  //       const response = await fetch('/api/user/refresh', {
+  //         method: 'POST',
+  //         headers: { 'Content-Type': 'application/json' },
+  //         body: JSON.stringify({ refreshToken: storedRefreshToken }),
+  //       });
 
-  //   // If token expired, try to refresh and retry
-  //   if (response.status === 401) {
+  //       if (!response.ok) {
+  //         throw new Error('Failed to refresh token');
+  //       }
+
+  //       const data = await response.json();
+
+  //       localStorage.setItem('accessToken', data.accessToken);
+  //       localStorage.setItem('refreshToken', data.refreshToken);
+  //       localStorage.setItem('user', JSON.stringify(data.user));
+
+  //       setAccessToken(data.accessToken);
+  //       setRefreshToken(data.refreshToken);
+  //       setUser(data.user);
+
+  //       return data.accessToken;
+  //     })();
+
   //     try {
-  //       const newToken = await refreshAccessToken();
-  //       headers['Authorization'] = `Bearer ${newToken}`;
-  //       response = await fetch(url, { ...options, headers });
-  //     } catch (error) {
-  //       throw new Error('Authentication failed');
+  //       return await refreshPromiseRef.current;
+  //     } finally {
+  //       refreshPromiseRef.current = null;
   //     }
-  //   }
+  //   }, []);
 
-  //   return response;
-  // }, [accessToken, refreshAccessToken]);
-  
+
   const authenticatedFetch = useCallback(async (url, options = {}) => {
-  let token = accessToken;
-  if (!token) {
-    try {
+  let token = accessToken || localStorage.getItem('accessToken');
+  if (token && isAccessTokenExpired(token)) {
       token = await refreshAccessToken();
-    } catch {
-      throw new Error('Authentication required');
     }
+    if (!token) {
+      throw new Error('Authentication required');
   }
 
   const headers = {

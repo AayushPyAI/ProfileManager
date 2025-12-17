@@ -15,9 +15,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@/contexts/UserContext';
 const DashboardClient = () => {
     const fetchControllerRef = useRef(null);
+    const hasFetchedRef = useRef(false);
+    const [limit, setLimit] = useState(5);
+    const [currentPage, setCurrentPage] = useState(1);
     const searchParams = useSearchParams();
-    const pageParam = Number(searchParams.get('page') || 1);
-    const limitParam = Number(searchParams.get('limit') || 5);
+    const pageParam = Number(searchParams.get('page') ?? currentPage);
+    const limitParam = Number(searchParams.get('limit') ?? limit);
+
 
     const router = useRouter();
     const { user, authenticatedFetch } = useUser();
@@ -26,20 +30,15 @@ const DashboardClient = () => {
     const [isListLoading, setIsListLoading] = useState(false);
     const [isSearchLoading, setIsSearchLoading] = useState(false);
     //   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-    const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalProfiles, setTotalProfiles] = useState(0);
-    const [limit, setLimit] = useState(5);
+    const [recentProfiles, setRecentProfiles] = useState(0);
 
     // Modal states
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [editingProfile, setEditingProfile] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
 
-    const [stats, setStats] = useState({
-        totalProfiles: 0,
-        recentProfiles: 0,
-    });
 
     // Check authentication with proper loading state
     // useEffect(() => {
@@ -51,6 +50,13 @@ const DashboardClient = () => {
     //     setIsCheckingAuth(false);
     //   }
     // }, [user, router]);
+    useEffect(() => {
+        const limitFromQuery = searchParams.get('limit');
+        if (limitFromQuery) {
+            setLimit(Number(limitFromQuery));
+        }
+    }, [searchParams]);
+
     const fetchProfiles = useCallback(async (page = pageParam) => {
         if (!user?._id) return;
         fetchControllerRef.current?.abort();
@@ -71,6 +77,7 @@ const DashboardClient = () => {
             const userProfiles = data.profiles || [];
 
             setProfiles(userProfiles);
+            setRecentProfiles(userProfiles.length);
             setFilteredProfiles(userProfiles);
             setCurrentPage(data.page || page);
             setTotalPages(data.pages || 1);
@@ -86,10 +93,12 @@ const DashboardClient = () => {
 
 
     useEffect(() => {
-        if (user) {
-            fetchProfiles(pageParam);
-        }
-    }, [fetchProfiles, user]);
+        if (!user?._id) return;
+        if (hasFetchedRef.current) return;
+
+        hasFetchedRef.current = true;
+        fetchProfiles(pageParam);
+    }, [user, pageParam, fetchProfiles]);
 
     const handleSearch = useCallback(
         async (query) => {
@@ -300,7 +309,7 @@ const DashboardClient = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-10">
                     <StatsCard
                         title="Total Profiles"
-                        value={stats.totalProfiles}
+                        value={totalProfiles}
                         icon={<FileText className="w-6 h-6" />}
                         description="All professional profiles"
                         className="bg-white/80 backdrop-blur-sm border border-slate-200/60"
@@ -308,7 +317,7 @@ const DashboardClient = () => {
 
                     <StatsCard
                         title="Recent Profiles"
-                        value={stats.recentProfiles}
+                        value={recentProfiles}
                         icon={<TrendingUp className="w-6 h-6" />}
                         description="Updated this week"
                         className="bg-white/80 backdrop-blur-sm border border-slate-200/60"

@@ -26,10 +26,6 @@ const UserSchema = new Schema(
         publicId: String,
         resourceType: String
     },
-    refreshToken: {
-      type: String,
-      default: null,
-    },
   },
   {
     timestamps: true, 
