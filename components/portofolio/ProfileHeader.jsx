@@ -5,7 +5,7 @@ import Background from "@/public/SPRINKLES.png";
 import person from "@/public/Group 2345.png"
 import Image from "next/image";
 
-const ProfileHeader = ({ profile }) => {
+export default function ProfileHeader({ profile }){
   return (
     <div className="flex flex-col">
       <section id="home" className="relative w-full min-h-[90vh] flex items-center overflow-hidden">
@@ -184,9 +184,6 @@ const ProfileHeader = ({ profile }) => {
     </div>
   );
 };
-
-export default ProfileHeader;
-
 
 const CommonAnchorTag = ({ tag, title, icon }) => {
   const baseClasses = `
