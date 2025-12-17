@@ -414,38 +414,45 @@ if (editingData.sectionOrder && Array.isArray(editingData.sectionOrder)) {
       // Convert skills to new format
       const convertedSkills = convertSkillsToNewFormat(editingData.skills || []);
       
+      // Merge personal data properly
+      const personalData = {
+        ...initialPersonalInfo,
+        ...(editingData.personal || {}),
+      };
+      
       setFormData({
-  ...initialFormState,
-  ...editingData,
-  education: (editingData.education || []).map(e => ({
-    ...e,
-    startDate: toInputDate(e.startDate),
-    endDate: toInputDate(e.endDate),
-    isCurrent: !e.endDate, // true if endDate missing
-  })),
-  experience: (editingData.experience || []).map(e => ({
-    ...e,
-    startDate: toInputDate(e.startDate),
-    endDate: toInputDate(e.endDate),
-    isCurrent: !e.endDate,
-    // Convert technologies array to string, or keep as string
-    technologies: convertTechnologiesToString(e.technologies),
-    // Convert responsibilities array to description if description doesn't exist
-    description: e.description || (e.responsibilities && Array.isArray(e.responsibilities) 
-      ? e.responsibilities.join('\n• ') 
-      : ''),
-  })),
-  projects: (editingData.projects || []).map(p => ({
-    ...p,
-    startDate: toInputDate(p.startDate),
-    endDate: toInputDate(p.endDate),
-    isCurrent: !p.endDate,
-    // Convert technologies array to string, or keep as string
-    technologies: convertTechnologiesToString(p.technologies),
-  })),
-  skills: convertedSkills,
-  customSections: customFields,
-});
+        ...initialFormState,
+        personal: personalData,
+        education: (editingData.education || []).map(e => ({
+          ...e,
+          startDate: toInputDate(e.startDate),
+          endDate: toInputDate(e.endDate),
+          isCurrent: !e.endDate,
+        })),
+        experience: (editingData.experience || []).map(e => ({
+          ...e,
+          startDate: toInputDate(e.startDate),
+          endDate: toInputDate(e.endDate),
+          isCurrent: !e.endDate,
+          technologies: convertTechnologiesToString(e.technologies),
+          description: e.description || (e.responsibilities && Array.isArray(e.responsibilities) 
+            ? e.responsibilities.join('\n• ') 
+            : ''),
+        })),
+        projects: (editingData.projects || []).map(p => ({
+          ...p,
+          startDate: toInputDate(p.startDate),
+          endDate: toInputDate(p.endDate),
+          isCurrent: !p.endDate,
+          technologies: convertTechnologiesToString(p.technologies),
+        })),
+        skills: convertedSkills,
+        certification: (editingData.certification || []).map(c => ({
+          ...c,
+          issueDate: toInputDate(c.issueDate),
+        })),
+        customSections: customFields,
+      });
 
 
       setSectionOrder(fixedOrder);

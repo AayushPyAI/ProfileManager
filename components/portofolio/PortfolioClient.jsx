@@ -25,6 +25,7 @@ export default function PortfolioClient({ profile: initialProfile }) {
   const loadMoreRef = useRef(null);
   const scrollHandlerRef = useRef(null);
   const observerRef = useRef(null);
+  const pdfGeneratedRef = useRef(false);
 
   /* --------------------
      PURE HELPERS (Memoized)
@@ -136,39 +137,6 @@ export default function PortfolioClient({ profile: initialProfile }) {
   }, []);
 
   /* --------------------
-     INTERSECTION OBSERVER (Optimized)
-  -------------------- */
-  useEffect(() => {
-    if (!loadMoreRef.current || !localProfile) return;
-
-    // Clean up previous observer
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-    }
-
-    observerRef.current = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && visibleCount < rawSections.length) {
-          // Load 2 sections at a time for better UX
-          setVisibleCount(prev => Math.min(prev + 2, rawSections.length));
-        }
-      },
-      { 
-        rootMargin: '300px',
-        threshold: 0.1 
-      }
-    );
-
-    observerRef.current.observe(loadMoreRef.current);
-
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
-  }, [localProfile, visibleCount]); // Only recreate when these change
-
-  /* --------------------
      DERIVED DATA (Memoized)
   -------------------- */
   const orderedSections = useMemo(() => {
@@ -245,6 +213,430 @@ export default function PortfolioClient({ profile: initialProfile }) {
     rawSections.slice(0, visibleCount),
     [rawSections, visibleCount]
   );
+
+  useEffect(() => {
+    if (!loadMoreRef.current || !localProfile) return;
+
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    observerRef.current = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && visibleCount < rawSections.length) {
+          setVisibleCount(prev => Math.min(prev + 2, rawSections.length));
+        }
+      },
+      { 
+        rootMargin: '300px',
+        threshold: 0.1 
+      }
+    );
+
+    observerRef.current.observe(loadMoreRef.current);
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [localProfile, visibleCount, rawSections.length]);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const shouldDownloadPDF = urlParams.get('downloadPDF') === 'true';
+    
+    if (!shouldDownloadPDF || !localProfile || pdfGeneratedRef.current) {
+      return;
+    }
+    
+    if (rawSections.length === 0) {
+      return;
+    }
+    
+    pdfGeneratedRef.current = true;
+    
+    const generatePDF = async () => {
+      const loadingIndicator = document.createElement('div');
+      loadingIndicator.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#222831;color:#00ADB5;padding:20px;border-radius:10px;z-index:9999;border:2px solid #00ADB5;';
+      loadingIndicator.innerHTML = '<div style="text-align:center;"><div style="border:3px solid #00ADB5;border-top:3px solid transparent;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:0 auto 10px;"></div><p>Generating PDF...</p></div>';
+      document.body.appendChild(loadingIndicator);
+      
+      const style = document.createElement('style');
+      style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+      document.head.appendChild(style);
+      
+      setVisibleCount(rawSections.length);
+      
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      const checkImagesLoaded = () => {
+        const images = document.querySelectorAll('img');
+        if (images.length === 0) return true;
+        return Array.from(images).every(img => img.complete || img.naturalWidth > 0);
+      };
+
+      let attempts = 0;
+      while (!checkImagesLoaded() && attempts < 15) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        attempts++;
+      }
+      
+      const elementsToHide = document.querySelectorAll(
+        '.no-print, button, [class*="scroll"], [class*="fixed"], [class*="animate-pulse"]'
+      );
+      const hiddenElements = [];
+      elementsToHide.forEach(el => {
+        if (el.style.display !== 'none') {
+          hiddenElements.push(el);
+          el.style.display = 'none';
+        }
+      });
+
+      const scrollProgressBar = document.querySelector('[class*="fixed top-0"]');
+      let progressBarHidden = false;
+      if (scrollProgressBar && scrollProgressBar.style.display !== 'none') {
+        scrollProgressBar.style.display = 'none';
+        progressBarHidden = true;
+      }
+
+      const mainContent = document.querySelector('main') || document.body;
+
+      if (!mainContent) {
+        hiddenElements.forEach(el => {
+          el.style.display = '';
+        });
+        if (progressBarHidden && scrollProgressBar) {
+          scrollProgressBar.style.display = '';
+        }
+        if (loadingIndicator.parentNode) {
+          loadingIndicator.parentNode.removeChild(loadingIndicator);
+        }
+        if (style.parentNode) {
+          style.parentNode.removeChild(style);
+        }
+        throw new Error('Main content not found');
+      }
+      
+      const convertAllOklchColors = () => {
+        const allElements = mainContent.querySelectorAll('*');
+        const bodyElement = mainContent;
+        
+            const convertColor = (colorValue) => {
+          if (!colorValue || (!colorValue.includes('oklch') && !colorValue.includes('color('))) {
+            return colorValue;
+          }
+          try {
+            const temp = document.createElement('div');
+            temp.style.color = colorValue;
+            temp.style.position = 'absolute';
+            temp.style.visibility = 'hidden';
+            temp.style.width = '1px';
+            temp.style.height = '1px';
+            document.body.appendChild(temp);
+            const rgb = window.getComputedStyle(temp).color;
+            document.body.removeChild(temp);
+            if (rgb && !rgb.includes('oklch') && !rgb.includes('color(') && rgb !== 'rgba(0, 0, 0, 0)') {
+              return rgb;
+            }
+          } catch (e) {
+          }
+          return '#ffffff';
+        };
+        
+        const convertGradient = (gradientValue) => {
+          if (!gradientValue || (!gradientValue.includes('oklch') && !gradientValue.includes('color('))) {
+            return gradientValue;
+          }
+          try {
+            return gradientValue.replace(/oklch\([^)]+\)/g, 'rgb(34, 40, 49)').replace(/color\([^)]+\)/g, 'rgb(34, 40, 49)');
+          } catch (e) {
+            return 'none';
+          }
+        };
+        
+        const convertElement = (el) => {
+          try {
+            const computed = window.getComputedStyle(el);
+            const colorProps = ['color', 'backgroundColor', 'borderColor', 'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor', 'outlineColor'];
+            
+            colorProps.forEach(prop => {
+              const value = computed[prop] || computed.getPropertyValue(prop);
+              if (value && (value.includes('oklch') || value.includes('color('))) {
+                const rgb = convertColor(value);
+                if (rgb) {
+                  el.style.setProperty(prop.replace(/([A-Z])/g, '-$1').toLowerCase(), rgb, 'important');
+                }
+              }
+            });
+            
+            const bgImage = computed.backgroundImage;
+            if (bgImage && bgImage !== 'none' && (bgImage.includes('oklch') || bgImage.includes('color('))) {
+              try {
+                const converted = bgImage.replace(/oklch\([^)]+\)/g, (match) => {
+                  const temp = document.createElement('div');
+                  temp.style.backgroundColor = match;
+                  temp.style.position = 'absolute';
+                  temp.style.visibility = 'hidden';
+                  document.body.appendChild(temp);
+                  const rgb = window.getComputedStyle(temp).backgroundColor;
+                  document.body.removeChild(temp);
+                  return rgb && !rgb.includes('oklch') ? rgb : 'rgb(34, 40, 49)';
+                }).replace(/color\([^)]+\)/g, 'rgb(34, 40, 49)');
+                if (converted && converted !== bgImage) {
+                  el.style.setProperty('background-image', converted, 'important');
+                }
+              } catch (e) {
+                if (bgImage.includes('oklch') || bgImage.includes('color(')) {
+                  el.style.setProperty('background-image', 'none', 'important');
+                  el.style.setProperty('background-color', 'rgb(34, 40, 49)', 'important');
+                }
+              }
+            }
+          } catch (e) {
+          }
+        };
+        
+        convertElement(bodyElement);
+        allElements.forEach(convertElement);
+      };
+
+      convertAllOklchColors();
+      
+      window.scrollTo(0, 0);
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      const originalOverflow = document.body.style.overflow || '';
+      const originalHeight = document.body.style.height || '';
+      const originalMainMinHeight = mainContent.style.minHeight || '';
+      const originalMainHeight = mainContent.style.height || '';
+      
+      document.body.style.overflow = 'visible';
+      document.body.style.height = 'auto';
+      mainContent.style.minHeight = 'auto';
+      mainContent.style.height = 'auto';
+
+      const colorFixStyle = document.createElement('style');
+      colorFixStyle.id = 'pdf-color-fix';
+      colorFixStyle.textContent = `
+        [style*="oklch"] {
+          color: rgb(255, 255, 255) !important;
+        }
+        [style*="oklch"][style*="background"] {
+          background-color: rgb(34, 40, 49) !important;
+        }
+      `;
+      document.head.appendChild(colorFixStyle);
+      
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      const processStylesheets = () => {
+        try {
+          const styleSheets = document.styleSheets;
+          for (let i = 0; i < styleSheets.length; i++) {
+            try {
+              const sheet = styleSheets[i];
+              if (sheet.cssRules) {
+                for (let j = 0; j < sheet.cssRules.length; j++) {
+                  const rule = sheet.cssRules[j];
+                  if (rule.style) {
+                    const colorProps = ['color', 'backgroundColor', 'background-color', 'borderColor', 'border-color', 'borderTopColor', 'border-top-color', 'borderRightColor', 'border-right-color', 'borderBottomColor', 'border-bottom-color', 'borderLeftColor', 'border-left-color'];
+                    
+                    colorProps.forEach(prop => {
+                      try {
+                        const value = rule.style.getPropertyValue(prop) || rule.style[prop];
+                        if (value && (value.includes('oklch') || value.includes('color('))) {
+                          const temp = document.createElement('div');
+                          temp.style.setProperty(prop, value);
+                          temp.style.position = 'absolute';
+                          temp.style.visibility = 'hidden';
+                          document.body.appendChild(temp);
+                          const rgb = window.getComputedStyle(temp).getPropertyValue(prop) || window.getComputedStyle(temp)[prop];
+                          document.body.removeChild(temp);
+                          if (rgb && !rgb.includes('oklch') && !rgb.includes('color(')) {
+                            rule.style.setProperty(prop, rgb, 'important');
+                          } else {
+                            rule.style.setProperty(prop, prop.includes('color') && !prop.includes('background') ? 'rgb(255, 255, 255)' : 'rgb(34, 40, 49)', 'important');
+                          }
+                        }
+                      } catch (e) {
+                      }
+                    });
+                    
+                    const bgImage = rule.style.getPropertyValue('background-image') || rule.style.backgroundImage;
+                    if (bgImage && bgImage !== 'none' && (bgImage.includes('oklch') || bgImage.includes('color('))) {
+                      const converted = bgImage.replace(/oklch\([^)]+\)/g, 'rgb(34, 40, 49)').replace(/color\([^)]+\)/g, 'rgb(34, 40, 49)');
+                      if (converted.includes('oklch') || converted.includes('color(')) {
+                        rule.style.setProperty('background-image', 'none', 'important');
+                        rule.style.setProperty('background-color', 'rgb(34, 40, 49)', 'important');
+                      } else {
+                        rule.style.setProperty('background-image', converted, 'important');
+                      }
+                    }
+                  }
+                }
+              }
+            } catch (e) {
+            }
+          }
+        } catch (e) {
+        }
+      };
+      
+      processStylesheets();
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      try {
+        const html2pdf = (await import('html2pdf.js')).default;
+        
+        const pdfPromise = html2pdf().set({
+          margin: [5, 5, 5, 5],
+          filename: `${localProfile?.personal?.name || 'profile'}_portfolio.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { 
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            letterRendering: true,
+            backgroundColor: '#222831',
+            windowWidth: mainContent.scrollWidth || window.innerWidth,
+            windowHeight: mainContent.scrollHeight || window.innerHeight,
+            scrollX: 0,
+            scrollY: 0,
+            allowTaint: false,
+            removeContainer: false,
+            imageTimeout: 15000,
+            onclone: (clonedDoc) => {
+              try {
+                const allElements = clonedDoc.querySelectorAll('*');
+                allElements.forEach(clonedEl => {
+                  try {
+                    const style = clonedEl.style;
+                    if (style.color && (style.color.includes('oklch') || style.color.includes('color('))) {
+                      style.color = 'rgb(255, 255, 255)';
+                    }
+                    if (style.backgroundColor && (style.backgroundColor.includes('oklch') || style.backgroundColor.includes('color('))) {
+                      style.backgroundColor = 'rgb(34, 40, 49)';
+                    }
+                    if (style.borderColor && (style.borderColor.includes('oklch') || style.borderColor.includes('color('))) {
+                      style.borderColor = 'rgb(229, 231, 235)';
+                    }
+                    if (style.backgroundImage && (style.backgroundImage.includes('oklch') || style.backgroundImage.includes('color('))) {
+                      const converted = style.backgroundImage.replace(/oklch\([^)]+\)/g, 'rgb(34, 40, 49)').replace(/color\([^)]+\)/g, 'rgb(34, 40, 49)');
+                      if (converted.includes('oklch') || converted.includes('color(')) {
+                        style.backgroundImage = 'none';
+                        style.backgroundColor = 'rgb(34, 40, 49)';
+                      } else {
+                        style.backgroundImage = converted;
+                      }
+                    }
+                  } catch (e) {
+                  }
+                });
+                
+                const styleSheets = clonedDoc.styleSheets;
+                for (let i = 0; i < styleSheets.length; i++) {
+                  try {
+                    const sheet = styleSheets[i];
+                    if (sheet.cssRules) {
+                      for (let j = 0; j < sheet.cssRules.length; j++) {
+                        const rule = sheet.cssRules[j];
+                        if (rule.style) {
+                          if (rule.style.color && (rule.style.color.includes('oklch') || rule.style.color.includes('color('))) {
+                            rule.style.color = 'rgb(255, 255, 255)';
+                          }
+                          if (rule.style.backgroundColor && (rule.style.backgroundColor.includes('oklch') || rule.style.backgroundColor.includes('color('))) {
+                            rule.style.backgroundColor = 'rgb(34, 40, 49)';
+                          }
+                          if (rule.style.backgroundImage && (rule.style.backgroundImage.includes('oklch') || rule.style.backgroundImage.includes('color('))) {
+                            const converted = rule.style.backgroundImage.replace(/oklch\([^)]+\)/g, 'rgb(34, 40, 49)').replace(/color\([^)]+\)/g, 'rgb(34, 40, 49)');
+                            if (converted.includes('oklch') || converted.includes('color(')) {
+                              rule.style.backgroundImage = 'none';
+                              rule.style.backgroundColor = 'rgb(34, 40, 49)';
+                            } else {
+                              rule.style.backgroundImage = converted;
+                            }
+                          }
+                        }
+                      }
+                    }
+                  } catch (e) {
+                  }
+                }
+              } catch (e) {
+              }
+            }
+          },
+          jsPDF: { 
+            unit: 'mm', 
+            format: 'a4', 
+            orientation: 'portrait',
+            compress: true
+          },
+          pagebreak: { 
+            mode: ['avoid-all', 'css', 'legacy'],
+            avoid: ['section', '[class*="card"]', '[class*="Section"]']
+          }
+        }).from(mainContent);
+        
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('PDF generation timeout after 60 seconds')), 60000);
+        });
+        
+        await Promise.race([pdfPromise.save(), timeoutPromise]);
+        
+        window.history.replaceState({}, '', window.location.pathname);
+      } catch (error) {
+        console.error('PDF generation failed:', error);
+        alert('Failed to generate PDF. Please check the console for details.');
+        pdfGeneratedRef.current = false;
+      } finally {
+        if (originalOverflow) {
+          document.body.style.overflow = originalOverflow;
+        } else {
+          document.body.style.removeProperty('overflow');
+        }
+        if (originalHeight) {
+          document.body.style.height = originalHeight;
+        } else {
+          document.body.style.removeProperty('height');
+        }
+        if (originalMainMinHeight) {
+          mainContent.style.minHeight = originalMainMinHeight;
+        } else {
+          mainContent.style.removeProperty('min-height');
+        }
+        if (originalMainHeight) {
+          mainContent.style.height = originalMainHeight;
+        } else {
+          mainContent.style.removeProperty('height');
+        }
+        
+        hiddenElements.forEach(el => {
+          el.style.display = '';
+        });
+        
+        if (progressBarHidden && scrollProgressBar) {
+          scrollProgressBar.style.display = '';
+        }
+        
+        const colorFix = document.getElementById('pdf-color-fix');
+        if (colorFix && colorFix.parentNode) {
+          colorFix.parentNode.removeChild(colorFix);
+        }
+        
+        if (loadingIndicator.parentNode) {
+          loadingIndicator.parentNode.removeChild(loadingIndicator);
+        }
+        if (style.parentNode) {
+          style.parentNode.removeChild(style);
+        }
+      }
+    };
+
+    generatePDF();
+  }, [localProfile, rawSections]);
 
   /* --------------------
      RENDER LOGIC

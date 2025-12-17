@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getProfilesByUser, countUserProfiles } from '@/lib/profile.js';
+import { getProfilesByUser, countUserProfiles, countRecentProfiles } from '@/lib/profile.js';
 import { authenticateRequest } from '@/lib/apiAuth.js';
 
 export async function GET(req) {
@@ -11,14 +11,16 @@ export async function GET(req) {
     const page = parseInt(searchParams.get('page')) || 1;
     const limit = parseInt(searchParams.get('limit')) || 5;
     
-const [profiles, total] = await Promise.all([
+const [profiles, total, recent] = await Promise.all([
   getProfilesByUser(user._id.toString(), page, limit), 
-  countUserProfiles(user._id.toString())
+  countUserProfiles(user._id.toString()),
+  countRecentProfiles(user._id.toString(), 7)
 ]);
     
     return NextResponse.json({ 
       profiles,
       total,
+      recent,
       page,
       limit,
       pages: Math.ceil(total / limit),

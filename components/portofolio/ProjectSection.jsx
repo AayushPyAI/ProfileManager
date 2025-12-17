@@ -1,106 +1,20 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
-import { Code, Calendar, Github, Play, ChevronLeft, ChevronRight } from "lucide-react";
+import { Code } from "lucide-react";
 import { HeaderTag, ProjectCard } from "./Cards";
 
 export default function ProjectsSection({ projects = [] }) {
-  const scrollRef = useRef(null);
-
-  const [showArrows, setShowArrows] = useState(false);
-  const [atStart, setAtStart] = useState(true);
-  const [atEnd, setAtEnd] = useState(false);
-
-  const CARD_WIDTH = 300 + 24;
-
-  /* ----------------------- CHECK OVERFLOW ----------------------- */
-  const checkOverflow = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    const hasOverflow = el.scrollWidth > el.clientWidth;
-    setShowArrows(hasOverflow);
-
-    setAtStart(el.scrollLeft <= 0);
-    setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
-  };
-
-  /* ----------------------- SCROLL HANDLERS ----------------------- */
-  const scrollLeft = () => {
-    scrollRef.current?.scrollBy({ left: -CARD_WIDTH, behavior: "smooth" });
-  };
-
-  const scrollRight = () => {
-    scrollRef.current?.scrollBy({ left: CARD_WIDTH, behavior: "smooth" });
-  };
-
-  /* ----------------------- EVENTS ----------------------- */
-  useEffect(() => {
-    const frame = requestAnimationFrame(checkOverflow);
-
-    const el = scrollRef.current;
-    if (!el) return;
-
-    el.addEventListener("scroll", checkOverflow);
-    window.addEventListener("resize", checkOverflow);
-
-    return () => {
-      cancelAnimationFrame(frame);
-      el.removeEventListener("scroll", checkOverflow);
-      window.removeEventListener("resize", checkOverflow);
-    };
-  }, [projects]);
-
   return (
     <section className="relative px-6">
       <div className="mx-auto">
         <HeaderTag title="Projects" subtitle="Project Portfolio" icon={<Code className="w-4 h-4 text-emerald-600" />}/> 
 
-        {showArrows && (
-          <div className="flex justify-end gap-3 mb-4">
-            {/* LEFT BUTTON */}
-            <button
-              disabled={atStart}
-              onClick={scrollLeft}
-              className={`
-                p-2 rounded-full transition
-                ${atStart ? "bg-gray-200 opacity-40" : "bg-gray-200 hover:bg-gray-300"}
-              `}
-            >
-              <ChevronLeft className="w-5 h-5 text-gray-700" />
-            </button>
-
-            {/* RIGHT BUTTON */}
-            <button
-              disabled={atEnd}
-              onClick={scrollRight}
-              className={`
-                p-2 rounded-full transition
-                ${atEnd ? "bg-gray-200 opacity-40" : "bg-gray-200 hover:bg-gray-300"}
-              `}
-            >
-              <ChevronRight className="w-5 h-5 text-gray-700" />
-            </button>
-          </div>
-        )}
-
-        {/* SCROLLER */}
-        <div
-          ref={scrollRef}
-          className="
-            flex gap-6 overflow-x-auto scrollbar-none
-            snap-x snap-mandatory pb-4 pt-2
-          "
-        >
-        {projects.map((p, i) => (
-  <div
-    key={i}
-    className="snap-center shrink-0 w-72 sm:w-80 md:w-96"
-  >
-    <ProjectCard project={p} />
-  </div>
-))}
-
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-2 pb-4">
+          {projects.map((p, i) => (
+            <div key={i} className="w-full">
+              <ProjectCard project={p} />
+            </div>
+          ))}
         </div>
       </div>
     </section>

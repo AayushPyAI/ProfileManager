@@ -2,7 +2,6 @@
 import {useEffect, useState } from 'react';
 import { Edit3, Trash2, ChevronLeft, ChevronRight, Eye, Share2, X, Copy, Check, Mail, Linkedin, Facebook, Download } from 'lucide-react';
 import Image from 'next/image';
-import { generatePrintableHTML } from '@/app/generatedPrintablePdf';
 
 const TINYURL_API_TOKEN = process.env.NEXT_PUBLIC_TINYURL_API_TOKEN; // or direct string
 
@@ -235,26 +234,41 @@ const ProfileList = ({
     window.open(portfolioUrl, "_blank");
   };
 
+  const [downloadingPDF, setDownloadingPDF] = useState(null);
+
   const handleDownloadPDF = async (profile) => {
     if (typeof window === "undefined") return;
     if (!profile?._id) return;
 
+    setDownloadingPDF(profile._id);
+
     try {
-      const htmlContent = generatePrintableHTML(profile);
-      const blob = new Blob([htmlContent], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
+      const response = await fetch('/api/pdf/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ profileId: profile._id }),
+      });
 
-      const pdfWindow = window.open(url, "_blank");
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
 
-      const timer = setInterval(() => {
-        if (!pdfWindow || pdfWindow.closed) {
-          clearInterval(timer);
-          URL.revokeObjectURL(url);
-        }
-      }, 2000);
-
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${profile.personal?.name || 'portfolio'}_${profile._id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (error) {
-      console.error("Redirection error:", error);
+      console.error('PDF download error:', error);
+      alert('Failed to download PDF. Please try again.');
+    } finally {
+      setDownloadingPDF(null);
     }
   };
   
@@ -385,9 +399,13 @@ const ProfileList = ({
                               onClick={() => handleDownloadPDF(profile)}
                               className="btn bg-linear-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 btn-sm shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-200"
                               title="Download PDF"
-                              disabled={!profile._id}
+                              disabled={!profile._id || downloadingPDF === profile._id}
                             >
-                              <Download className="w-4 h-4" />
+                              {downloadingPDF === profile._id ? (
+                                <span className="loading loading-spinner loading-sm"></span>
+                              ) : (
+                                <Download className="w-4 h-4" />
+                              )}
                             </button>
                           <button
                             onClick={() => handlePortfolioAction(profile)}

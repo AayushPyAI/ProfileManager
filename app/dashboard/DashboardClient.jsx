@@ -82,6 +82,11 @@ const DashboardClient = () => {
             setCurrentPage(data.page || page);
             setTotalPages(data.pages || 1);
             setTotalProfiles(data.total || 0);
+            
+            setStats({
+                totalProfiles: data.total || 0,
+                recentProfiles: data.recent || 0,
+            });
         } catch (err) {
             if (err.name !== 'AbortError') {
                 console.error(err);
@@ -137,9 +142,21 @@ const DashboardClient = () => {
         setIsFormModalOpen(true);
     };
 
-    const handleEditProfile = (profile) => {
-        setEditingProfile(profile);
-        setIsFormModalOpen(true);
+    const handleEditProfile = async (profile) => {
+        if (!profile?._id) return;
+        
+        try {
+            const response = await authenticatedFetch(`/api/profile/${profile._id}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch profile data');
+            }
+            const data = await response.json();
+            setEditingProfile(data.profile);
+            setIsFormModalOpen(true);
+        } catch (error) {
+            console.error('Error fetching profile for edit:', error);
+            alert('Failed to load profile data. Please try again.');
+        }
     };
 
     const handleSaveProfile = async (profileData) => {
@@ -177,7 +194,7 @@ const DashboardClient = () => {
                 throw new Error("Failed to save profile");
             }
 
-            await fetchProfiles();
+            await fetchProfiles(currentPage);
             setIsFormModalOpen(false);
             setEditingProfile(null);
 
@@ -209,7 +226,7 @@ const DashboardClient = () => {
                 throw new Error(`Failed to delete profile: ${response.status}`);
             }
 
-            await fetchProfiles();
+            await fetchProfiles(currentPage);
         } catch (error) {
             console.error('Error deleting profile:', error);
             alert('Failed to delete profile. Please try again.');

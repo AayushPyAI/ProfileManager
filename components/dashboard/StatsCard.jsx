@@ -7,6 +7,9 @@ const StatsCard = ({ title, value, icon, description, className = '' }) => {
           <div>
             <h3 className="text-sm font-medium">{title}</h3>
             <p className="text-2xl font-bold mt-1">{value}</p>
+            {description && (
+              <p className="text-xs text-slate-500 mt-1">{description}</p>
+            )}
           </div>
             {icon}
         </div>
